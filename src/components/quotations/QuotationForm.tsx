@@ -36,7 +36,7 @@ const quotationFormSchema = z.object({
   items: z.array(quotationItemSchema).min(1, "At least one item is required"),
   discount: z.coerce.number().min(0, "Discount cannot be negative").optional().default(0),
   notes: z.string().optional(),
-  status: z.enum(QUOTATION_STATUSES).default('Sent'),
+  status: z.enum(QUOTATION_STATUSES).default('To Send'),
   currency: z.string().default('MUR'),
 });
 
@@ -74,7 +74,7 @@ export function QuotationForm({ initialData, onSave }: QuotationFormProps) {
       items: [{ standTypeId: '', description: '', quantity: 1, unitPrice: 0, total: 0 }],
       discount: 0,
       notes: '',
-      status: 'Sent',
+      status: 'To Send',
       currency: 'MUR',
     },
   });
@@ -105,49 +105,31 @@ export function QuotationForm({ initialData, onSave }: QuotationFormProps) {
   const handleStandTypeChange = (index: number, standTypeId: string) => {
     const selectedStand = STAND_TYPES.find(s => s.id === standTypeId);
     if (selectedStand) {
-      const currentQuantity = form.getValues(`items.${index}.quantity`) || 1;
-      update(index, {
-        standTypeId: selectedStand.id,
-        description: selectedStand.name,
-        quantity: currentQuantity,
-        unitPrice: selectedStand.unitPrice,
-        total: currentQuantity * selectedStand.unitPrice,
-      });
+      const currentItem = form.getValues(`items.${index}`);
+      const quantity = currentItem?.quantity || 1;
+      form.setValue(`items.${index}.standTypeId`, selectedStand.id);
+      form.setValue(`items.${index}.description`, selectedStand.name);
+      form.setValue(`items.${index}.unitPrice`, selectedStand.unitPrice);
+      form.setValue(`items.${index}.total`, quantity * selectedStand.unitPrice);
     }
   };
 
-  const handleQuantityChange = (index: number, quantityInput: number | string) => {
+  const handleQuantityChange = (index: number, quantityInput: string | number) => {
     const numQuantity = Number(quantityInput);
     const validQuantity = isNaN(numQuantity) || numQuantity < 1 ? 1 : numQuantity;
-  
-    const standTypeId = form.getValues(`items.${index}.standTypeId`);
-    const description = form.getValues(`items.${index}.description`);
-    const unitPrice = form.getValues(`items.${index}.unitPrice`) || 0;
-  
-    update(index, {
-      standTypeId,
-      description,
-      quantity: validQuantity,
-      unitPrice,
-      total: validQuantity * unitPrice,
-    });
+    const currentItem = form.getValues(`items.${index}`);
+    const unitPrice = currentItem?.unitPrice || 0;
+    form.setValue(`items.${index}.quantity`, validQuantity);
+    form.setValue(`items.${index}.total`, validQuantity * unitPrice);
   };
   
-  const handleUnitPriceChange = (index: number, unitPriceInput: number | string) => {
+  const handleUnitPriceChange = (index: number, unitPriceInput: string | number) => {
     const numUnitPrice = Number(unitPriceInput);
     const validUnitPrice = isNaN(numUnitPrice) || numUnitPrice < 0 ? 0 : numUnitPrice;
-    
-    const standTypeId = form.getValues(`items.${index}.standTypeId`);
-    const description = form.getValues(`items.${index}.description`);
-    const quantity = form.getValues(`items.${index}.quantity`) || 0;
-  
-    update(index, {
-      standTypeId,
-      description,
-      quantity,
-      unitPrice: validUnitPrice,
-      total: quantity * validUnitPrice,
-    });
+    const currentItem = form.getValues(`items.${index}`);
+    const quantity = currentItem?.quantity || 0;
+    form.setValue(`items.${index}.unitPrice`, validUnitPrice);
+    form.setValue(`items.${index}.total`, quantity * validUnitPrice);
   };
 
 
@@ -169,7 +151,7 @@ export function QuotationForm({ initialData, onSave }: QuotationFormProps) {
 
     try {
       if (onSave) {
-        // await onSave(quotationData as Quotation); 
+        // await onSave(quotationData as Quotation); // This is for edit mode, not implemented yet
       } else {
         const newQuotation = await addMockQuotation(quotationData); 
         toast({
@@ -339,6 +321,7 @@ export function QuotationForm({ initialData, onSave }: QuotationFormProps) {
                           type="number" 
                           placeholder="1" 
                           {...controllerField} 
+                          value={controllerField.value || ''}
                           onChange={(e) => {
                             const value = e.target.value;
                             controllerField.onChange(value === '' ? undefined : parseInt(value, 10));
@@ -363,6 +346,7 @@ export function QuotationForm({ initialData, onSave }: QuotationFormProps) {
                           placeholder="0.00" 
                           step="any"
                           {...controllerField} 
+                          value={controllerField.value || ''}
                           onChange={(e) => {
                             const value = e.target.value;
                             controllerField.onChange(value === '' ? undefined : parseFloat(value));
@@ -432,6 +416,7 @@ export function QuotationForm({ initialData, onSave }: QuotationFormProps) {
                         placeholder="0.00" 
                         step="any"
                         {...field} 
+                        value={field.value || ''}
                         onChange={(e) => {
                           const value = parseFloat(e.target.value);
                           field.onChange(isNaN(value) ? 0 : value);

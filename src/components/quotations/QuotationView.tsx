@@ -2,7 +2,7 @@
 "use client";
 import React from 'react';
 import type { Quotation } from '@/lib/types';
-import { STAND_TYPES, VAT_RATE } from '@/lib/constants';
+import { STAND_TYPES, VAT_RATE, QuotationStatus } from '@/lib/constants';
 import { DocumentHeader } from '@/components/shared/DocumentHeader';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -45,6 +45,20 @@ export function QuotationView({ quotation }: QuotationViewProps) {
     // window.print(); 
   }
 
+  const getStatusBadgeVariant = (status: QuotationStatus) => {
+    switch (status) {
+      case 'Won':
+        return 'default';
+      case 'Sent':
+      case 'To Send':
+        return 'secondary';
+      case 'Rejected':
+        return 'destructive';
+      default:
+        return 'outline';
+    }
+  };
+
   const amountBeforeVat = Math.max(0, quotation.subTotal - (quotation.discount || 0));
 
   return (
@@ -61,7 +75,7 @@ export function QuotationView({ quotation }: QuotationViewProps) {
             <p><strong>Expires:</strong> {formatDate(quotation.expiryDate)}</p>
             <div className="flex items-center justify-end"><strong>Status:</strong> 
               <Badge 
-                variant={quotation.status === 'Won' ? 'default' : quotation.status === 'Sent' ? 'secondary' : 'destructive'} 
+                variant={getStatusBadgeVariant(quotation.status)}
                 className="capitalize text-sm ml-1"
               >
                 {quotation.status}

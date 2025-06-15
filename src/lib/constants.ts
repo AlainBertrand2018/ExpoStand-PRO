@@ -1,3 +1,4 @@
+
 export const COMPANY_DETAILS = {
   name: "Festival International Des Saveurs Ltd.",
   brn: "C24215222",
@@ -29,7 +30,7 @@ export const STAND_TYPES: StandType[] = [
 
 export const VAT_RATE = 0.15; // 15%
 
-export const QUOTATION_STATUSES = ["Sent", "Won", "Rejected"] as const;
+export const QUOTATION_STATUSES = ["To Send", "Sent", "Won", "Rejected"] as const;
 export type QuotationStatus = typeof QUOTATION_STATUSES[number];
 
 export const INVOICE_PAYMENT_STATUSES = ["Unpaid", "Paid", "Overdue"] as const;

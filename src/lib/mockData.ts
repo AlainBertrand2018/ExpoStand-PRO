@@ -19,7 +19,7 @@ const createMockItems = (numItems: number = 1): import('./types').DocumentItem[]
     const quantity = standType.id === 'regional_pavilions' || standType.id === 'gastronomic_pavilions' ? 1 : Math.floor(Math.random() * 3) + 1;
     const unitPrice = standType.unitPrice;
     items.push({
-      id: `item-${Date.now()}-${i}`,
+      id: `item-${Date.now()}-${i}-${Math.random().toString(36).substring(2,5)}`,
       standTypeId: standType.id,
       description: standType.name,
       quantity,
@@ -51,9 +51,10 @@ export const mockQuotations: Quotation[] = [
     expiryDate: nextWeek.toISOString(),
     items: createMockItems(2),
     ...calculateTotals(createMockItems(2), 500), 
-    status: "Sent",
+    status: "To Send",
     currency: "MUR",
     notes: "Early bird discount applied.",
+    discount: 500,
   },
   {
     id: generateQuotationId("Foodies"),
@@ -69,6 +70,7 @@ export const mockQuotations: Quotation[] = [
     ...calculateTotals(createMockItems(1), 0),
     status: "Won",
     currency: "MUR",
+    discount: 0,
   },
   {
     id: generateQuotationId("Innovate"),
@@ -84,12 +86,14 @@ export const mockQuotations: Quotation[] = [
     status: "Rejected",
     currency: "MUR",
     notes: "Budget constraints.",
+    discount: 1000,
   },
 ];
 
 mockQuotations.forEach(q => {
-  const tempItems = q.items; 
+  const tempItems = q.items.length > 0 ? q.items : createMockItems(1); // Ensure items exist before calc
   const { subTotal, discount, vatAmount, grandTotal } = calculateTotals(tempItems, q.discount);
+  q.items = tempItems;
   q.subTotal = subTotal;
   q.discount = discount;
   q.vatAmount = vatAmount;
@@ -133,6 +137,7 @@ export const mockInvoices: Invoice[] = [
     ...calculateTotals(invoiceItems, invoiceDiscount),
     paymentStatus: "Unpaid",
     currency: "MUR",
+    discount: invoiceDiscount,
   },
   {
     id: generateInvoiceId("General Electrics"),
@@ -149,12 +154,14 @@ export const mockInvoices: Invoice[] = [
     paymentStatus: "Unpaid",
     currency: "MUR",
     notes: "Payment reminder sent.",
+    discount: 250,
   },
 ];
 
 mockInvoices.forEach(inv => {
-  const tempItems = inv.items; 
+  const tempItems = inv.items.length > 0 ? inv.items : createMockItems(1); // Ensure items exist
   const { subTotal, discount, vatAmount, grandTotal } = calculateTotals(tempItems, inv.discount);
+  inv.items = tempItems;
   inv.subTotal = subTotal;
   inv.discount = discount;
   inv.vatAmount = vatAmount;
@@ -176,6 +183,7 @@ export const addMockQuotation = async (quotation: Omit<Quotation, 'id' | 'quotat
     id: generateQuotationId(quotation.clientName),
     quotationDate: new Date().toISOString(),
     expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), 
+    discount: quotation.discount || 0,
   };
   mockQuotations.unshift(newQuotation);
   return new Promise(resolve => setTimeout(() => resolve(newQuotation), 300));

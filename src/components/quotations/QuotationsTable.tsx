@@ -6,15 +6,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Eye, Edit3, MoreHorizontal, CheckCircle, XCircle, Send as SendIcon, Mail } from 'lucide-react';
+import { Eye, Edit3, MoreHorizontal, CheckCircle, XCircle, Send as SendIcon, Mail, Info } from 'lucide-react';
 import type { Quotation } from '@/lib/types';
 import { QUOTATION_STATUSES, QuotationStatus } from '@/lib/constants';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-// import { getMockQuotationById } from '@/lib/mockData'; // Not needed if we don't generate PDF here
-// import { generatePdfDocument } from '@/lib/pdfGenerator'; // Not needed if we don't generate PDF here
 
 interface QuotationsTableProps {
   quotations: Quotation[];
@@ -46,14 +44,27 @@ export function QuotationsTable({ quotations, onUpdateStatus, isLoading }: Quota
       });
       return;
     }
-    // In a real app, you might fetch the full quotation data here if needed, then generate PDF, then use a backend service to email.
-    // For this prototype, we'll just show a toast.
     toast({
       title: "Simulate Sending PDF",
       description: `Quotation PDF for ${quotationId} would be sent to ${clientName} (${clientEmail}) from marketing@fids-maurice.online.`,
       duration: 5000,
     });
   };
+
+  const getStatusBadgeVariant = (status: QuotationStatus) => {
+    switch (status) {
+      case 'Won':
+        return 'default';
+      case 'Sent':
+      case 'To Send':
+        return 'secondary';
+      case 'Rejected':
+        return 'destructive';
+      default:
+        return 'outline';
+    }
+  };
+
 
   return (
     <div className="rounded-lg border overflow-hidden bg-card shadow-md">
@@ -91,7 +102,7 @@ export function QuotationsTable({ quotations, onUpdateStatus, isLoading }: Quota
               <TableCell className="text-right">{formatCurrency(quotation.grandTotal, quotation.currency)}</TableCell>
               <TableCell>
                 <Badge 
-                  variant={quotation.status === 'Won' ? 'default' : quotation.status === 'Sent' ? 'secondary' : 'destructive'}
+                  variant={getStatusBadgeVariant(quotation.status)}
                   className="capitalize"
                 >
                   {quotation.status}
@@ -127,6 +138,7 @@ export function QuotationsTable({ quotations, onUpdateStatus, isLoading }: Quota
                         disabled={quotation.status === status}
                         className="capitalize"
                       >
+                        {status === 'To Send' && <Info className="mr-2 h-4 w-4" />}
                         {status === 'Sent' && <SendIcon className="mr-2 h-4 w-4" />}
                         {status === 'Won' && <CheckCircle className="mr-2 h-4 w-4 text-green-500" />}
                         {status === 'Rejected' && <XCircle className="mr-2 h-4 w-4 text-red-500" />}
