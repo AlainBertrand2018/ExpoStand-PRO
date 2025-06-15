@@ -8,13 +8,14 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Eye, MoreHorizontal, Send, CreditCard, Mail } from 'lucide-react';
 import type { Invoice } from '@/lib/types';
-import { INVOICE_PAYMENT_STATUSES, InvoicePaymentStatus, COMPANY_DETAILS } from '@/lib/constants';
+import { INVOICE_PAYMENT_STATUSES, InvoicePaymentStatus, COMPANY_DETAILS, APP_NAME } from '@/lib/constants';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getMockInvoiceById } from '@/lib/mockData';
 import { generatePdfDocument } from '@/lib/pdfGenerator';
+import { useAuth } from '@/context/AuthContext';
 
 
 interface InvoicesTableProps {
@@ -25,6 +26,7 @@ interface InvoicesTableProps {
 
 export function InvoicesTable({ invoices, onUpdatePaymentStatus, isLoading }: InvoicesTableProps) {
   const { toast } = useToast();
+  const { currentUser } = useAuth(); // Although not used for RBAC here yet, good to have if needed
 
   if (!isLoading && invoices.length === 0) {
     return (
@@ -59,7 +61,6 @@ export function InvoicesTable({ invoices, onUpdatePaymentStatus, isLoading }: In
         return;
       }
 
-      // Generate and trigger download of the PDF
       generatePdfDocument(invoice, 'Invoice');
       toast({
         title: "PDF Downloading",
@@ -67,7 +68,6 @@ export function InvoicesTable({ invoices, onUpdatePaymentStatus, isLoading }: In
         duration: 7000,
       });
 
-      // Prepare mailto link
       const subject = encodeURIComponent(`Invoice ${invoice.id} from ${COMPANY_DETAILS.name}`);
       const body = encodeURIComponent(
 `Dear ${clientName},
@@ -80,8 +80,7 @@ Thank you for your business.
 
 Sincerely,
 The Team at ${COMPANY_DETAILS.name}
-(via ExpoStand Pro)
-${COMPANY_DETAILS.email}`
+(via ${APP_NAME} - ${COMPANY_DETAILS.email})`
       );
       
       window.location.href = `mailto:${clientEmail}?subject=${subject}&body=${body}`;
@@ -159,6 +158,7 @@ ${COMPANY_DETAILS.email}`
                     <DropdownMenuItem onClick={() => handleSendInvoicePdf(invoice.id, invoice.clientEmail, invoice.clientName)}>
                       <Mail className="mr-2 h-4 w-4" /> Send PDF
                     </DropdownMenuItem>
+                    {/* Add Edit/Delete for Invoices here if needed, similar to QuotationsTable, checking for isSuperAdmin */}
                     {onUpdatePaymentStatus && (
                       <>
                         <DropdownMenuSeparator />
@@ -188,3 +188,5 @@ ${COMPANY_DETAILS.email}`
     </div>
   );
 }
+
+```

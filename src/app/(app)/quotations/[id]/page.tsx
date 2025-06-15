@@ -11,6 +11,7 @@ import Link from 'next/link';
 import { FullPageLoading } from '@/components/shared/LoadingSpinner';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { FileSearch } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 export default function ViewQuotationPage() {
   const params = useParams();
@@ -18,6 +19,8 @@ export default function ViewQuotationPage() {
   const id = typeof params.id === 'string' ? params.id : '';
   const [quotation, setQuotation] = useState<Quotation | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { currentUser } = useAuth();
+  const isSuperAdmin = currentUser?.role === 'Super Admin';
 
   useEffect(() => {
     if (id) {
@@ -68,13 +71,13 @@ export default function ViewQuotationPage() {
             <Button variant="outline" onClick={() => router.back()}>
               <ArrowLeft className="mr-2 h-4 w-4" /> Back
             </Button>
-            {/* Edit functionality not implemented in this pass
-            <Link href={`/quotations/${id}/edit`}>
-              <Button variant="default">
-                <Edit className="mr-2 h-4 w-4" /> Edit
-              </Button>
-            </Link>
-            */}
+            {isSuperAdmin && (
+              <Link href={`/quotations/${id}/edit`}>
+                <Button variant="default">
+                  <Edit className="mr-2 h-4 w-4" /> Edit
+                </Button>
+              </Link>
+            )}
           </div>
         }
       />
@@ -82,3 +85,5 @@ export default function ViewQuotationPage() {
     </>
   );
 }
+
+```

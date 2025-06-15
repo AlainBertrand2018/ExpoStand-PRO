@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Eye, Edit3, MoreHorizontal, CheckCircle, XCircle, Send as SendIcon, Mail, Info } from 'lucide-react';
+import { Eye, Edit3, MoreHorizontal, CheckCircle, XCircle, Send as SendIcon, Mail, Info, Trash2 } from 'lucide-react';
 import type { Quotation } from '@/lib/types';
 import { QUOTATION_STATUSES, QuotationStatus, COMPANY_DETAILS } from '@/lib/constants';
 import { formatCurrency, formatDate } from '@/lib/utils';
@@ -15,6 +15,7 @@ import { FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getMockQuotationById } from '@/lib/mockData';
 import { generatePdfDocument } from '@/lib/pdfGenerator';
+import { useAuth } from '@/context/AuthContext';
 
 interface QuotationsTableProps {
   quotations: Quotation[];
@@ -24,6 +25,8 @@ interface QuotationsTableProps {
 
 export function QuotationsTable({ quotations, onUpdateStatus, isLoading }: QuotationsTableProps) {
   const { toast } = useToast();
+  const { currentUser } = useAuth();
+  const isSuperAdmin = currentUser?.role === 'Super Admin';
 
   if (!isLoading && quotations.length === 0) {
     return (
@@ -58,7 +61,6 @@ export function QuotationsTable({ quotations, onUpdateStatus, isLoading }: Quota
         return;
       }
 
-      // Generate and trigger download of the PDF
       generatePdfDocument(quotation, 'Quotation');
       toast({
         title: "PDF Downloading",
@@ -66,7 +68,6 @@ export function QuotationsTable({ quotations, onUpdateStatus, isLoading }: Quota
         duration: 7000,
       });
 
-      // Prepare mailto link
       const subject = encodeURIComponent(`Quotation ${quotation.id} from ${COMPANY_DETAILS.name}`);
       const body = encodeURIComponent(
 `Dear ${clientName},
@@ -79,8 +80,7 @@ We look forward to hearing from you.
 
 Best regards,
 The Team at ${COMPANY_DETAILS.name}
-(via ExpoStand Pro)
-${COMPANY_DETAILS.email}`
+(via ${APP_NAME} - ${COMPANY_DETAILS.email})`
       );
       
       window.location.href = `mailto:${clientEmail}?subject=${subject}&body=${body}`;
@@ -107,6 +107,16 @@ ${COMPANY_DETAILS.email}`
       default:
         return 'outline';
     }
+  };
+
+  const handleDeleteQuotation = (quotationId: string) => {
+    // Placeholder for actual delete logic
+    toast({
+      title: "Delete Action (Super Admin)",
+      description: `Quotation ${quotationId} would be deleted. (Not implemented yet)`,
+      variant: isSuperAdmin ? "default" : "destructive",
+    });
+    console.log(`Super Admin trying to delete quotation: ${quotationId}`);
   };
 
 
@@ -170,9 +180,20 @@ ${COMPANY_DETAILS.email}`
                     <DropdownMenuItem onClick={() => handleSendQuotationPdf(quotation.id, quotation.clientEmail, quotation.clientName)}>
                       <Mail className="mr-2 h-4 w-4" /> Send PDF
                     </DropdownMenuItem>
-                    {/* <DropdownMenuItem disabled> 
-                      <Edit3 className="mr-2 h-4 w-4" /> Edit
-                    </DropdownMenuItem> */}
+                    
+                    {isSuperAdmin && (
+                      <>
+                        <DropdownMenuItem asChild>
+                           <Link href={`/quotations/${quotation.id}/edit`} className="flex items-center">
+                            <Edit3 className="mr-2 h-4 w-4" /> Edit
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDeleteQuotation(quotation.id)} className="text-destructive focus:text-destructive-foreground focus:bg-destructive/90">
+                          <Trash2 className="mr-2 h-4 w-4" /> Delete
+                        </DropdownMenuItem>
+                      </>
+                    )}
+
                     <DropdownMenuSeparator />
                     <DropdownMenuLabel>Change Status</DropdownMenuLabel>
                     {QUOTATION_STATUSES.map(status => (
@@ -199,3 +220,98 @@ ${COMPANY_DETAILS.email}`
     </div>
   );
 }
+
+```></content>
+  </change>
+  <change>
+    <file>/src/app/(app)/quotations/[id]/page.tsx</file>
+    <content><![CDATA[
+"use client";
+import React, { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { PageHeader } from '@/components/shared/PageHeader';
+import { QuotationView } from '@/components/quotations/QuotationView';
+import type { Quotation } from '@/lib/types';
+import { getMockQuotationById } from '@/lib/mockData';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft, Edit } from 'lucide-react';
+import Link from 'next/link';
+import { FullPageLoading } from '@/components/shared/LoadingSpinner';
+import { EmptyState } from '@/components/shared/EmptyState';
+import { FileSearch } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+
+export default function ViewQuotationPage() {
+  const params = useParams();
+  const router = useRouter();
+  const id = typeof params.id === 'string' ? params.id : '';
+  const [quotation, setQuotation] = useState<Quotation | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const { currentUser } = useAuth();
+  const isSuperAdmin = currentUser?.role === 'Super Admin';
+
+  useEffect(() => {
+    if (id) {
+      setIsLoading(true);
+      getMockQuotationById(id)
+        .then(data => {
+          if (data) {
+            setQuotation(data);
+          } else {
+            setQuotation(null); // Explicitly set to null if not found
+          }
+        })
+        .catch(console.error)
+        .finally(() => setIsLoading(false));
+    } else {
+      setIsLoading(false);
+    }
+  }, [id]);
+
+  if (isLoading) {
+    return <FullPageLoading message="Loading quotation details..." />;
+  }
+
+  if (!quotation) {
+    return (
+       <div className="container mx-auto py-8">
+        <Button variant="outline" onClick={() => router.back()} className="mb-4">
+          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Quotations
+        </Button>
+        <EmptyState
+            icon={FileSearch}
+            title="Quotation Not Found"
+            description={`The quotation with ID "${id}" could not be found. It might have been deleted or the ID is incorrect.`}
+            actionText="View All Quotations"
+            actionHref="/quotations"
+        />
+       </div>
+    );
+  }
+
+  return (
+    <>
+      <PageHeader
+        title={`Quotation ${quotation.id}`}
+        description={`Details for quotation to ${quotation.clientName}.`}
+        actions={
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => router.back()}>
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back
+            </Button>
+            {isSuperAdmin && (
+              <Link href={`/quotations/${id}/edit`}>
+                <Button variant="default">
+                  <Edit className="mr-2 h-4 w-4" /> Edit
+                </Button>
+              </Link>
+            )}
+          </div>
+        }
+      />
+      <QuotationView quotation={quotation} />
+    </>
+  );
+}
+
+```
