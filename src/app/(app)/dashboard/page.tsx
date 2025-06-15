@@ -1,20 +1,22 @@
+
 "use client";
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { StatCard } from '@/components/dashboard/StatCard';
-import { DollarSign, FileText, AlertTriangle, CheckCircle, BarChart3, Users, BarChartBig } from 'lucide-react';
+import { DollarSign, FileText, AlertTriangle, CheckCircle, BarChartBig, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { STAND_TYPES } from '@/lib/constants';
 import type { Quotation, Invoice } from '@/lib/types';
 import { getMockQuotations, getMockInvoices } from '@/lib/mockData';
-import { formatCurrency, formatDate, getStandTypeName } from '@/lib/utils';
+import { formatCurrency, formatDate } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from "recharts";
 import { FullPageLoading } from '@/components/shared/LoadingSpinner';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function DashboardPage() {
   const [quotations, setQuotations] = useState<Quotation[]>([]);
@@ -23,38 +25,62 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function fetchData() {
-      setLoading(true);
-      const [quotationsData, invoicesData] = await Promise.all([
-        getMockQuotations(),
-        getMockInvoices(),
-      ]);
-      setQuotations(quotationsData);
-      setInvoices(invoicesData);
-      setLoading(false);
+      // setLoading(true); // Initial state is already true
+      try {
+        const [quotationsData, invoicesData] = await Promise.all([
+          getMockQuotations(),
+          getMockInvoices(),
+        ]);
+        setQuotations(quotationsData);
+        setInvoices(invoicesData);
+      } catch (error) {
+        console.error("Dashboard data fetch error:", error);
+        // Optionally, set an error state here to inform the user
+      } finally {
+        setLoading(false);
+      }
     }
     fetchData();
   }, []);
 
+  const stats = useMemo(() => {
+    if (loading) {
+      return {
+        totalQuotationsValue: 0,
+        quotationsCount: 0,
+        totalInvoicesValue: 0,
+        invoicesCount: 0,
+        openQuotations: 0,
+        unpaidInvoices: 0,
+      };
+    }
+    return {
+      totalQuotationsValue: quotations.reduce((sum, q) => sum + q.grandTotal, 0),
+      quotationsCount: quotations.length,
+      totalInvoicesValue: invoices.reduce((sum, inv) => sum + inv.grandTotal, 0),
+      invoicesCount: invoices.length,
+      openQuotations: quotations.filter(q => q.status === 'Sent').length,
+      unpaidInvoices: invoices.filter(inv => inv.paymentStatus === 'Unpaid').length,
+    };
+  }, [quotations, invoices, loading]);
+
+  const standAvailabilityData = useMemo(() => {
+    if (loading) return [];
+    return STAND_TYPES.map(stand => ({
+      name: stand.name,
+      available: stand.available,
+      sold: (quotations.filter(q => q.status === 'Won' && q.items.some(item => item.standTypeId === stand.id)).length)
+    }));
+  }, [quotations, loading]); // STAND_TYPES is constant
+
+  const chartConfig = useMemo(() => ({
+    available: { label: "Available", color: "hsl(var(--chart-2))" },
+    sold: { label: "Sold", color: "hsl(var(--chart-1))" },
+  }), []) satisfies import("@/components/ui/chart").ChartConfig;
+
   if (loading) {
     return <FullPageLoading message="Loading dashboard data..." />;
   }
-
-  const totalQuotationsValue = quotations.reduce((sum, q) => sum + q.grandTotal, 0);
-  const totalInvoicesValue = invoices.reduce((sum, inv) => sum + inv.grandTotal, 0);
-  const openQuotations = quotations.filter(q => q.status === 'Sent').length;
-  const unpaidInvoices = invoices.filter(inv => inv.paymentStatus === 'Unpaid').length;
-
-  const standAvailabilityData = STAND_TYPES.map(stand => ({
-    name: stand.name,
-    available: stand.available,
-    sold: (quotations.filter(q => q.status === 'Won' && q.items.some(item => item.standTypeId === stand.id)).length) // Simplified: assumes 1 won quote = 1 stand sold
-  }));
-  
-  const chartConfig = {
-    available: { label: "Available", color: "hsl(var(--chart-2))" },
-    sold: { label: "Sold", color: "hsl(var(--chart-1))" },
-  } satisfies import("@/components/ui/chart").ChartConfig;
-
 
   return (
     <>
@@ -71,10 +97,10 @@ export default function DashboardPage() {
       />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
-        <StatCard title="Total Quotations Value" value={formatCurrency(totalQuotationsValue)} icon={DollarSign} description={`${quotations.length} quotations generated`} />
-        <StatCard title="Total Invoices Value" value={formatCurrency(totalInvoicesValue)} icon={CheckCircle} description={`${invoices.length} invoices issued`} />
-        <StatCard title="Open Quotations" value={openQuotations} icon={AlertTriangle} description="Awaiting client response" />
-        <StatCard title="Unpaid Invoices" value={unpaidInvoices} icon={FileText} description="Pending payments" />
+        <StatCard title="Total Quotations Value" value={formatCurrency(stats.totalQuotationsValue)} icon={DollarSign} description={`${stats.quotationsCount} quotations generated`} />
+        <StatCard title="Total Invoices Value" value={formatCurrency(stats.totalInvoicesValue)} icon={CheckCircle} description={`${stats.invoicesCount} invoices issued`} />
+        <StatCard title="Open Quotations" value={stats.openQuotations} icon={AlertTriangle} description="Awaiting client response" />
+        <StatCard title="Unpaid Invoices" value={stats.unpaidInvoices} icon={FileText} description="Pending payments" />
       </div>
 
       <div className="grid gap-8 lg:grid-cols-2 mb-8">
@@ -90,7 +116,15 @@ export default function DashboardPage() {
                <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
                 <BarChart accessibilityLayer data={standAvailabilityData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
                   <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                  <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8}  tickFormatter={(value) => value.length > 15 ? value.substring(0,12) + "..." : value}/>
+                  <XAxis 
+                    dataKey="name" 
+                    tickLine={false} 
+                    axisLine={false} 
+                    tickMargin={8}  
+                    tickFormatter={(value) => 
+                      value && typeof value === 'string' && value.length > 15 ? `${value.substring(0,12)}...` : value
+                    }
+                  />
                   <YAxis tickLine={false} axisLine={false} />
                   <ChartTooltip content={<ChartTooltipContent />} />
                   <ChartLegend content={<ChartLegendContent />} />
@@ -129,7 +163,6 @@ export default function DashboardPage() {
   );
 }
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 function RecentDataTable({ type, data }: { type: 'quotation' | 'invoice', data: (Quotation | Invoice)[] }) {
   if (data.length === 0) {
@@ -172,3 +205,4 @@ function RecentDataTable({ type, data }: { type: 'quotation' | 'invoice', data: 
     </Table>
   );
 }
+    
