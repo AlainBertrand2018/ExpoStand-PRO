@@ -47,3 +47,18 @@ export interface Invoice extends ClientDetails {
   notes?: string;
   currency: string;
 }
+
+export interface User {
+  id: string;
+  email: string;
+  password?: string; // Password should not be stored in context long-term or sent to client after login
+  name: string;
+  role: 'Super Admin' | 'User';
+}
+
+export interface AuthContextType {
+  currentUser: User | null;
+  isLoading: boolean;
+  login: (email: string, password_provided: string) => Promise<boolean>;
+  logout: () => void;
+}

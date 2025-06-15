@@ -1,4 +1,6 @@
 
+import type { User } from './types';
+
 export const COMPANY_DETAILS = {
   name: "Festival International Des Saveurs Ltd.",
   brn: "C24215222",
@@ -37,3 +39,12 @@ export const INVOICE_PAYMENT_STATUSES = ["Unpaid", "Paid", "Overdue"] as const;
 export type InvoicePaymentStatus = typeof INVOICE_PAYMENT_STATUSES[number];
 
 export const APP_NAME = "ExpoStand Pro";
+
+export const USERS: User[] = [
+  { id: "user-1", email: "alain.bertrand@fids-maurice.online", password: "Ab@280765", role: "Super Admin", name: "Alain BERTRAND" },
+  { id: "user-2", email: "wesley@fids-maurice.online", password: "Wr@280765", role: "User", name: "Wesley ROSE" },
+  { id: "user-3", email: "stephan@fids-maurice.online", password: "St@280765", role: "User", name: "Stephan TOURMENTIN" },
+  { id: "user-4", email: "catheleen@fids-maurice.online", password: "Cm@280765", role: "User", name: "Catheleen MARIMOOTOO" },
+];
+
+export const LOCAL_STORAGE_AUTH_KEY = 'expoStandProUser';
