@@ -538,72 +538,77 @@ const sidebarMenuButtonVariants = cva(
   }
 )
 
-interface SidebarMenuButtonOwnProps {
-  renderAsSlot?: boolean;
+// Define props specific to SidebarMenuButton's own configuration and what it might receive from Link
+interface SidebarMenuButtonOwnProps extends VariantProps<typeof sidebarMenuButtonVariants> {
+  renderAsSlot?: boolean; // Whether SidebarMenuButton itself should be a Slot
   isActive?: boolean;
   tooltip?: string | React.ComponentProps<typeof TooltipContent>;
+  children?: React.ReactNode;
+  className?: string;
+  // Props that can be passed by <Link asChild>
+  href?: string;
+  onClick?: React.MouseEventHandler<HTMLElement>;
+  // We will explicitly handle `asChild` if passed from Link
 }
 
-type SidebarMenuButtonProps = SidebarMenuButtonOwnProps &
-  VariantProps<typeof sidebarMenuButtonVariants> &
-  // Allow all standard HTML attributes for <a> or <button>
-  // Also explicitly allow 'href' and 'asChild' (from parent Link)
-  // Omit SidebarMenuButtonOwnProps from general HTMLAttributes to avoid conflicts
-  Omit<React.HTMLAttributes<HTMLElement>, keyof SidebarMenuButtonOwnProps> &
-  { href?: string; asChild?: boolean }; // asChild here is the one from parent Link
+// All other HTML attributes for <a> or <button>
+type AllHTMLAttributes = Omit<React.HTMLAttributes<HTMLElement>, keyof SidebarMenuButtonOwnProps | 'asChild'>;
+
+type SidebarMenuButtonProps = SidebarMenuButtonOwnProps & AllHTMLAttributes;
+
 
 const SidebarMenuButton = React.forwardRef<HTMLElement, SidebarMenuButtonProps>(
   (props, ref) => {
     const {
-      renderAsSlot = false, // SidebarMenuButton's own "asChild" decision
+      // SidebarMenuButton's own config props
+      renderAsSlot = false,
       isActive = false,
       variant,
       size,
       tooltip,
       className,
       children,
-      href, // This can come from parent Link or be passed directly
-      asChild: asChildFromParent, // This is the asChild prop from the parent (e.g., NextLink)
-      ...rest // All other props (e.g., onClick from NextLink, other HTML attributes)
+      // Props that might come from Link (or other parents)
+      href,
+      // Capture all other props, which might include `asChild` from Link
+      ...restOfAllProps
     } = props;
-
+    
     const { isMobile, state } = useSidebar();
 
-    // Decide what actual element to render.
-    // If renderAsSlot is true, SidebarMenuButton delegates to its children via Slot.
-    // Else, if href is present, it's an anchor.
+    // Explicitly destructure `asChild` from the rest of the props, if it exists.
+    // This `asChildFromLink` is the prop passed by `<Link asChild>`.
+    const { asChild: asChildFromLink, ...attributesToSpread } = restOfAllProps as typeof restOfAllProps & { asChild?: boolean };
+
+    // Determine the component to render.
+    // If renderAsSlot is true, SidebarMenuButton itself is a Slot.
+    // Else, if href is present, it's an anchor tag.
     // Else, it's a button.
     const ActualComp = renderAsSlot ? Slot : (href ? "a" : "button");
 
-    // 'rest' should NOT contain 'href' or 'asChildFromParent' because they were explicitly destructured.
-    // So, spreading 'rest' should be safe from the 'asChild' warning.
-    const elementSpecificProps: React.HTMLAttributes<HTMLElement> & { href?: string; type?: string } = {
-      ...rest, // Spread event handlers, aria-attributes, etc.
+    const finalElementProps: any = {
+      ...attributesToSpread, // These are now clean of `asChildFromLink`
+      ref,
       className: cn(sidebarMenuButtonVariants({ variant, size, className })),
-      "data-sidebar": "menu-button",
-      "data-size": size,
-      "data-active": isActive,
+      'data-sidebar': "menu-button",
+      'data-size': size,
+      'data-active': isActive,
     };
 
     if (ActualComp === "a" && href) {
-      elementSpecificProps.href = href;
-    } else if (ActualComp === "button" && !href && !elementSpecificProps.type) {
-      elementSpecificProps.type = "button";
+      finalElementProps.href = href;
+      // onClick (if passed from Link) is already in attributesToSpread
+    } else if (ActualComp === "button" && !href && !finalElementProps.type) {
+      finalElementProps.type = "button";
     }
+    // IMPORTANT: `asChildFromLink` is NOT part of `finalElementProps`
 
-    const mainRenderedElement = React.createElement(
-      ActualComp,
-      { ref, ...elementSpecificProps },
-      children
-    );
+    const mainRenderedElement = React.createElement(ActualComp, finalElementProps, children);
 
     if (!tooltip) {
       return mainRenderedElement;
     }
 
-    // If there's a tooltip, wrap it.
-    // TooltipTrigger asChild means TooltipTrigger will pass its props to mainRenderedElement.
-    // TooltipTrigger (Radix Slot) should correctly handle not passing 'asChild' down if it's already consumed.
     return (
       <Tooltip>
         <TooltipTrigger asChild>
