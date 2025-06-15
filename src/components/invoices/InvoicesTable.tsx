@@ -20,7 +20,7 @@ import { useAuth } from '@/context/AuthContext';
 
 interface InvoicesTableProps {
   invoices: Invoice[];
-  onUpdatePaymentStatus?: (id: string, status: InvoicePaymentStatus) => void; 
+  onUpdatePaymentStatus?: (id: string, status: InvoicePaymentStatus) => void;
   isLoading?: boolean;
 }
 
@@ -61,7 +61,7 @@ export function InvoicesTable({ invoices, onUpdatePaymentStatus, isLoading }: In
         return;
       }
 
-      generatePdfDocument(invoice, 'Invoice');
+      generatePdfDocument(invoice, 'Invoice'); // This triggers the download
       toast({
         title: "PDF Downloading",
         description: `Invoice ${invoice.id}.pdf is downloading. Please attach it to the email.`,
@@ -80,9 +80,9 @@ Thank you for your business.
 
 Sincerely,
 The Team at ${COMPANY_DETAILS.name}
-(via ${APP_NAME} - ${COMPANY_DETAILS.email})`
+(marketing@fids-maurice.online via ${APP_NAME})`
       );
-      
+
       window.location.href = `mailto:${clientEmail}?subject=${subject}&body=${body}`;
 
     } catch (error) {
@@ -94,7 +94,7 @@ The Team at ${COMPANY_DETAILS.name}
       });
     }
   };
-  
+
   return (
     <div className="rounded-lg border overflow-hidden bg-card shadow-md">
       <Table>
@@ -133,7 +133,7 @@ The Team at ${COMPANY_DETAILS.name}
               <TableCell>{formatDate(invoice.dueDate)}</TableCell>
               <TableCell className="text-right">{formatCurrency(invoice.grandTotal, invoice.currency)}</TableCell>
               <TableCell>
-                <Badge 
+                <Badge
                   variant={invoice.paymentStatus === 'Paid' ? 'default' : invoice.paymentStatus === 'Unpaid' ? 'secondary' : 'destructive'}
                   className="capitalize"
                 >
@@ -164,14 +164,14 @@ The Team at ${COMPANY_DETAILS.name}
                         <DropdownMenuSeparator />
                         <DropdownMenuLabel>Payment Status</DropdownMenuLabel>
                         {INVOICE_PAYMENT_STATUSES.map(status => (
-                          <DropdownMenuItem 
-                            key={status} 
+                          <DropdownMenuItem
+                            key={status}
                             onClick={() => onUpdatePaymentStatus(invoice.id, status)}
                             disabled={invoice.paymentStatus === status}
                             className="capitalize"
                           >
                             {status === 'Paid' && <CreditCard className="mr-2 h-4 w-4 text-green-500" />}
-                            {status === 'Unpaid' && <Send className="mr-2 h-4 w-4" />} 
+                            {status === 'Unpaid' && <Send className="mr-2 h-4 w-4" />}
                             {status === 'Overdue' && <CreditCard className="mr-2 h-4 w-4 text-red-500" />}
                             Mark as {status}
                           </DropdownMenuItem>
@@ -188,5 +188,3 @@ The Team at ${COMPANY_DETAILS.name}
     </div>
   );
 }
-
-```
