@@ -9,11 +9,14 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Bot, Lightbulb, Zap } from 'lucide-react';
-import { suggestStandConfiguration, type SuggestStandConfigurationInput, type SuggestStandConfigurationOutput } from '@/ai/flows/suggest-stand-configuration';
+import { Bot, Lightbulb, Zap, AlertTriangle } from 'lucide-react';
+// import { suggestStandConfiguration, type SuggestStandConfigurationInput, type SuggestStandConfigurationOutput } from '@/ai/flows/suggest-stand-configuration';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from '@/components/ui/skeleton';
+
+// Define types here if import is commented out, to avoid breaking the form schema
+type SuggestStandConfigurationOutput = { suggestedConfiguration: string; reasoning: string };
 
 
 const suggestionFormSchema = z.object({
@@ -41,19 +44,32 @@ export default function AiSuggestionPage() {
   async function onSubmit(data: SuggestionFormValues) {
     setIsLoading(true);
     setSuggestionResult(null);
-    try {
-      const result = await suggestStandConfiguration(data as SuggestStandConfigurationInput);
-      setSuggestionResult(result);
-    } catch (error) {
-      console.error("AI suggestion error:", error);
-      toast({
-        title: "Error",
-        description: "Failed to get AI suggestion. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    toast({
+      title: "Feature Temporarily Unavailable",
+      description: "AI suggestions are currently disabled. Please try again later.",
+      variant: "destructive",
+      duration: 5000,
+    });
+    // try {
+    //   // const result = await suggestStandConfiguration(data as SuggestStandConfigurationInput);
+    //   // setSuggestionResult(result);
+    //   // Simulating a delay for UI purposes
+    //   await new Promise(resolve => setTimeout(resolve, 1000));
+    //   setSuggestionResult({
+    //     suggestedConfiguration: "AI Suggestion feature is temporarily disabled.",
+    //     reasoning: "The AI model could not be reached. This might be due to ongoing maintenance or configuration issues."
+    //   });
+    // } catch (error) {
+    //   console.error("AI suggestion error:", error);
+    //   toast({
+    //     title: "Error",
+    //     description: "Failed to get AI suggestion. Please try again.",
+    //     variant: "destructive",
+    //   });
+    // } finally {
+    //   setIsLoading(false);
+    // }
+    setIsLoading(false); // Reset loading state
   }
 
   return (
@@ -62,6 +78,13 @@ export default function AiSuggestionPage() {
         title="AI Stand Suggestion Tool"
         description="Get an AI-powered recommendation for the optimal stand configuration based on client needs."
       />
+      <Alert variant="destructive" className="mb-6">
+        <AlertTriangle className="h-4 w-4" />
+        <AlertTitle>Service Notice</AlertTitle>
+        <AlertDescription>
+          The AI Suggestion feature is temporarily unavailable. We are working to restore it.
+        </AlertDescription>
+      </Alert>
       <div className="grid md:grid-cols-3 gap-8">
         <Card className="md:col-span-1 shadow-xl">
           <CardHeader>
@@ -124,7 +147,7 @@ export default function AiSuggestionPage() {
               <CardFooter>
                 <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" disabled={isLoading}>
                   {isLoading ? <Zap className="mr-2 h-4 w-4 animate-pulse" /> : <Lightbulb className="mr-2 h-4 w-4" />}
-                  {isLoading ? 'Getting Suggestion...' : 'Get Suggestion'}
+                  {isLoading ? 'Getting Suggestion...' : 'Get Suggestion (Temporarily Disabled)'}
                 </Button>
               </CardFooter>
             </form>
@@ -177,7 +200,7 @@ export default function AiSuggestionPage() {
                 <Bot className="w-16 h-16 text-muted-foreground mb-4" />
                 <h3 className="text-xl font-semibold text-primary mb-2">Ready for a Suggestion?</h3>
                 <p className="text-muted-foreground max-w-sm">
-                  Fill in the client's requirements on the left, and our AI will suggest the best stand configuration.
+                  Fill in the client's requirements on the left, and our AI will suggest the best stand configuration. <br/> (Note: This feature is temporarily unavailable).
                 </p>
             </Card>
           )}
