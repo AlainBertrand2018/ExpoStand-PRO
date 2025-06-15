@@ -541,9 +541,11 @@ const sidebarMenuButtonVariants = cva(
 const SidebarMenuButton = React.forwardRef<
   HTMLElement,
   React.HTMLAttributes<HTMLElement> & {
-    renderAsSlot?: boolean; // Changed from asChild to renderAsSlot
+    renderAsSlot?: boolean; // This is SidebarMenuButton's own prop to decide if it's a Slot
     isActive?: boolean;
     tooltip?: string | React.ComponentProps<typeof TooltipContent>;
+    // Allow any other props, including `href` and potentially `asChild` from a parent Link
+    [key: string]: any; 
   } & VariantProps<typeof sidebarMenuButtonVariants>
 >(
   (
@@ -555,39 +557,40 @@ const SidebarMenuButton = React.forwardRef<
       tooltip,
       className,
       children,
-      ...restProps // Contains props from parent (e.g. Link), potentially including Link's asChild and href
+      ...restProps // Contains props from parent (e.g. Link), which might include `href` and `asChild`
     },
     ref
   ) => {
     const { state, isMobile } = useSidebar();
 
-    // Destructure `asChild` that might come from a parent <Link asChild>.
-    // This `asChildFromLink` prop should NOT be spread onto native DOM elements.
-    const { asChild: asChildFromLink, ...propsForElement } = restProps as any;
+    // Explicitly destructure `asChild` and `href` if they come from restProps (e.g., from a parent Link)
+    // The `_asChildFromParent` is only to capture it and prevent it from being spread.
+    const { asChild: _asChildFromParent, href: hrefFromParent, ...otherParentProps } = restProps;
+
+    const hasHref = typeof hrefFromParent === 'string';
 
     // Determine the component to render.
-    // If `renderAsSlot` is true, SidebarMenuButton itself is a Slot.
-    // Otherwise, if `href` is present (from Link), it's an 'a' tag.
-    // Otherwise, it's a 'button' tag.
-    const hasHref = typeof (propsForElement as any).href === 'string';
+    // If renderAsSlot (SidebarMenuButton's own prop) is true, it's a Slot.
+    // Otherwise, if it has an href (from parent Link), it's an 'a'.
+    // Otherwise, it's a 'button'.
     const Comp = renderAsSlot ? Slot : (hasHref ? "a" : "button");
 
-    const commonElementProps: any = {
-      // `propsForElement` already has `asChildFromLink` removed.
-      // It contains other props from parent (like href, onClick handlers from Link).
-      ...propsForElement,
+    const elementProps: React.AllHTMLAttributes<HTMLElement> & { [key: string]: any } = {
+      ...otherParentProps, // Spread props other than _asChildFromParent and hrefFromParent
       className: cn(sidebarMenuButtonVariants({ variant, size, className })),
       "data-sidebar": "menu-button",
       "data-size": size,
       "data-active": isActive,
     };
 
-    // Set 'type="button"' for actual button elements if not already specified
-    if (Comp === "button" && !commonElementProps.type && !hasHref) {
-      commonElementProps.type = "button";
+    if (Comp === "a") {
+      elementProps.href = hrefFromParent; // Add href back if rendering an 'a'
+    } else if (Comp === "button" && !hasHref && !elementProps.type) {
+      elementProps.type = "button"; // Default type for button
     }
     
-    const mainElement = React.createElement(Comp, { ref, ...commonElementProps }, children);
+    // `elementProps` should now be clean of `_asChildFromParent`
+    const mainElement = React.createElement(Comp, { ref, ...elementProps } as any, children);
 
     if (!tooltip) {
       return mainElement;
@@ -777,3 +780,4 @@ export {
   SidebarTrigger,
   useSidebar,
 }
+
