@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Download, Printer } from 'lucide-react';
 import { formatCurrency, formatDate, getStandTypeName } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { generatePdfDocument } from '@/lib/pdfGenerator';
 
 interface QuotationViewProps {
   quotation: Quotation;
@@ -20,10 +21,20 @@ export function QuotationView({ quotation }: QuotationViewProps) {
   const { toast } = useToast();
 
   const handleDownloadPdf = () => {
-    toast({
-      title: "PDF Download (Placeholder)",
-      description: "Actual PDF generation would occur here.",
-    });
+    try {
+      generatePdfDocument(quotation, 'Quotation');
+      toast({
+        title: "PDF Generated",
+        description: `Quotation ${quotation.id}.pdf has been downloaded.`,
+      });
+    } catch (error) {
+      console.error("PDF Generation Error:", error);
+      toast({
+        title: "Error Generating PDF",
+        description: "There was an issue creating the PDF. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
   
   const handlePrint = () => {
@@ -48,7 +59,14 @@ export function QuotationView({ quotation }: QuotationViewProps) {
           <div className="text-sm text-right mt-2 sm:mt-0 space-y-1">
             <p><strong>Date:</strong> {formatDate(quotation.quotationDate)}</p>
             <p><strong>Expires:</strong> {formatDate(quotation.expiryDate)}</p>
-            <div className="flex items-center justify-end"><strong>Status:</strong> <Badge variant={quotation.status === 'Won' ? 'default' : quotation.status === 'Sent' ? 'secondary' : 'destructive'} className="capitalize text-sm ml-1">{quotation.status}</Badge></div>
+            <div className="flex items-center justify-end"><strong>Status:</strong> 
+              <Badge 
+                variant={quotation.status === 'Won' ? 'default' : quotation.status === 'Sent' ? 'secondary' : 'destructive'} 
+                className="capitalize text-sm ml-1"
+              >
+                {quotation.status}
+              </Badge>
+            </div>
           </div>
         </div>
       </CardHeader>

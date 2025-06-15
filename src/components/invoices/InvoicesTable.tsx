@@ -13,6 +13,8 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+// import { getMockInvoiceById } from '@/lib/mockData'; // Not needed if we don't generate PDF here
+// import { generatePdfDocument } from '@/lib/pdfGenerator'; // Not needed if we don't generate PDF here
 
 
 interface InvoicesTableProps {
@@ -36,18 +38,21 @@ export function InvoicesTable({ invoices, onUpdatePaymentStatus, isLoading }: In
     );
   }
 
-  const handleSendInvoicePdf = (invoiceId: string, clientEmail: string | undefined) => {
+  const handleSendInvoicePdf = (invoiceId: string, clientEmail: string | undefined, clientName: string) => {
     if (!clientEmail) {
       toast({
         title: "Cannot Send PDF",
-        description: `Client email is missing for invoice ${invoiceId}.`,
+        description: `Client email is missing for invoice ${invoiceId}. Please check the original quotation or client details.`,
         variant: "destructive",
       });
       return;
     }
+    // In a real app, you might fetch the full invoice data here if needed, then generate PDF, then use a backend service to email.
+    // For this prototype, we'll just show a toast.
     toast({
-      title: "Send PDF (Placeholder)",
-      description: `Invoice ${invoiceId} PDF would be sent to ${clientEmail} from marketing@fids-maurice.online.`,
+      title: "Simulate Sending PDF",
+      description: `Invoice PDF for ${invoiceId} would be sent to ${clientName} (${clientEmail}) from marketing@fids-maurice.online.`,
+      duration: 5000,
     });
   };
   
@@ -111,7 +116,7 @@ export function InvoicesTable({ invoices, onUpdatePaymentStatus, isLoading }: In
                         <Eye className="mr-2 h-4 w-4" /> View
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleSendInvoicePdf(invoice.id, invoice.clientEmail)}>
+                    <DropdownMenuItem onClick={() => handleSendInvoicePdf(invoice.id, invoice.clientEmail, invoice.clientName)}>
                       <Mail className="mr-2 h-4 w-4" /> Send PDF
                     </DropdownMenuItem>
                     {onUpdatePaymentStatus && (

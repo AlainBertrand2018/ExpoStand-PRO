@@ -13,6 +13,8 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+// import { getMockQuotationById } from '@/lib/mockData'; // Not needed if we don't generate PDF here
+// import { generatePdfDocument } from '@/lib/pdfGenerator'; // Not needed if we don't generate PDF here
 
 interface QuotationsTableProps {
   quotations: Quotation[];
@@ -35,18 +37,21 @@ export function QuotationsTable({ quotations, onUpdateStatus, isLoading }: Quota
     );
   }
 
-  const handleSendQuotationPdf = (quotationId: string, clientEmail: string | undefined) => {
+  const handleSendQuotationPdf = (quotationId: string, clientEmail: string | undefined, clientName: string) => {
     if (!clientEmail) {
       toast({
         title: "Cannot Send PDF",
-        description: `Client email is missing for quotation ${quotationId}.`,
+        description: `Client email is missing for quotation ${quotationId}. Please edit the quotation to add an email address.`,
         variant: "destructive",
       });
       return;
     }
+    // In a real app, you might fetch the full quotation data here if needed, then generate PDF, then use a backend service to email.
+    // For this prototype, we'll just show a toast.
     toast({
-      title: "Send PDF (Placeholder)",
-      description: `Quotation ${quotationId} PDF would be sent to ${clientEmail} from marketing@fids-maurice.online.`,
+      title: "Simulate Sending PDF",
+      description: `Quotation PDF for ${quotationId} would be sent to ${clientName} (${clientEmail}) from marketing@fids-maurice.online.`,
+      duration: 5000,
     });
   };
 
@@ -107,7 +112,7 @@ export function QuotationsTable({ quotations, onUpdateStatus, isLoading }: Quota
                         <Eye className="mr-2 h-4 w-4" /> View
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleSendQuotationPdf(quotation.id, quotation.clientEmail)}>
+                    <DropdownMenuItem onClick={() => handleSendQuotationPdf(quotation.id, quotation.clientEmail, quotation.clientName)}>
                       <Mail className="mr-2 h-4 w-4" /> Send PDF
                     </DropdownMenuItem>
                     {/* <DropdownMenuItem disabled> 

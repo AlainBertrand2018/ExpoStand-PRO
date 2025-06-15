@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Download, Printer } from 'lucide-react';
 import { formatCurrency, formatDate, getStandTypeName } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { generatePdfDocument } from '@/lib/pdfGenerator';
 
 interface InvoiceViewProps {
   invoice: Invoice;
@@ -20,10 +21,20 @@ export function InvoiceView({ invoice }: InvoiceViewProps) {
   const { toast } = useToast();
 
   const handleDownloadPdf = () => {
-    toast({
-      title: "PDF Download (Placeholder)",
-      description: "Actual PDF generation would occur here.",
-    });
+    try {
+      generatePdfDocument(invoice, 'Invoice');
+      toast({
+        title: "PDF Generated",
+        description: `Invoice ${invoice.id}.pdf has been downloaded.`,
+      });
+    } catch (error) {
+      console.error("PDF Generation Error:", error);
+      toast({
+        title: "Error Generating PDF",
+        description: "There was an issue creating the PDF. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handlePrint = () => {
@@ -49,7 +60,14 @@ export function InvoiceView({ invoice }: InvoiceViewProps) {
           <div className="text-sm text-right mt-2 sm:mt-0 space-y-1">
             <p><strong>Date Issued:</strong> {formatDate(invoice.invoiceDate)}</p>
             <p><strong>Due Date:</strong> {formatDate(invoice.dueDate)}</p>
-            <div className="flex items-center justify-end"><strong>Status:</strong> <Badge variant={invoice.paymentStatus === 'Paid' ? 'default' : invoice.paymentStatus === 'Unpaid' ? 'secondary' : 'destructive'} className="capitalize text-sm ml-1">{invoice.paymentStatus}</Badge></div>
+            <div className="flex items-center justify-end"><strong>Status:</strong> 
+              <Badge 
+                variant={invoice.paymentStatus === 'Paid' ? 'default' : invoice.paymentStatus === 'Unpaid' ? 'secondary' : 'destructive'} 
+                className="capitalize text-sm ml-1"
+              >
+                {invoice.paymentStatus}
+              </Badge>
+            </div>
           </div>
         </div>
       </CardHeader>
