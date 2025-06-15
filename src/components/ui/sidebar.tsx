@@ -526,31 +526,31 @@ const sidebarMenuButtonVariants = cva(
 const SidebarMenuButton = React.forwardRef<
   HTMLElement,
   React.HTMLAttributes<HTMLElement> & {
-    asChild?: boolean; // SidebarMenuButton's own asChild prop
+    asChild?: boolean;
     isActive?: boolean;
     tooltip?: string | React.ComponentProps<typeof TooltipContent>;
   } & VariantProps<typeof sidebarMenuButtonVariants>
 >(
   (
     {
-      asChild: useSlotOverride = false, // SidebarMenuButton's own asChild, aliased
+      asChild: useSlotOverride = false, 
       isActive = false,
       variant = "default",
       size = "default",
       tooltip,
       className,
       children,
-      ...restProps // Contains props from parent, potentially including parent's asChild
+      ...restProps 
     },
     ref
   ) => {
     const { isMobile, state } = useSidebar();
     
-    const Comp = useSlotOverride ? Slot : "button";
+    // Explicitly destructure and remove 'asChild' from restProps if it exists.
+    // This 'asChild' would be from a parent component like <Link asChild>.
+    const { asChild: _asChildFromParent, ...propsToSpread } = restProps;
 
-    // Destructure `asChild` from `restProps` (which came from the parent, e.g. <Link asChild>)
-    // This ensures `asChildFromParent` is not spread onto the native DOM element if Comp is "button".
-    const { asChild: _asChildFromParent, ...otherParentProps } = restProps;
+    const Comp = useSlotOverride ? Slot : "button";
 
     const buttonElement = (
       <Comp
@@ -559,7 +559,7 @@ const SidebarMenuButton = React.forwardRef<
         data-size={size}
         data-active={isActive}
         className={cn(sidebarMenuButtonVariants({ variant, size }), className)}
-        {...otherParentProps} // Spread remaining props from parent (e.g. href, onClick)
+        {...propsToSpread} 
       >
         {children}
       </Comp>
@@ -759,4 +759,3 @@ export {
   useSidebar,
 }
 
-    
