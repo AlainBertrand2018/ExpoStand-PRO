@@ -71,8 +71,21 @@ const SidebarProvider = React.forwardRef<
     const isMobile = useIsMobile()
     const [openMobile, setOpenMobile] = React.useState(false)
 
-    const [_open, _setOpen] = React.useState(defaultOpen)
+    const [_open, _setOpen] = React.useState(() => {
+        if (typeof document !== 'undefined') {
+            const cookieValue = document.cookie
+                .split("; ")
+                .find((row) => row.startsWith(`${SIDEBAR_COOKIE_NAME}=`))
+                ?.split("=")[1];
+            if (cookieValue) {
+                return cookieValue === "true";
+            }
+        }
+        return defaultOpen;
+    });
+    
     const open = openProp ?? _open
+    
     const setOpen = React.useCallback(
       (value: boolean | ((value: boolean) => boolean)) => {
         const openState = typeof value === "function" ? value(open) : value
@@ -81,7 +94,9 @@ const SidebarProvider = React.forwardRef<
         } else {
           _setOpen(openState)
         }
-        document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
+        if (typeof document !== 'undefined') {
+            document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
+        }
       },
       [setOpenProp, open]
     )
@@ -526,82 +541,67 @@ const sidebarMenuButtonVariants = cva(
 const SidebarMenuButton = React.forwardRef<
   HTMLElement,
   React.HTMLAttributes<HTMLElement> & {
-    asChild?: boolean;
+    renderAsSlot?: boolean; // Changed from asChild to renderAsSlot
     isActive?: boolean;
     tooltip?: string | React.ComponentProps<typeof TooltipContent>;
   } & VariantProps<typeof sidebarMenuButtonVariants>
 >(
   (
     {
-      asChild = false, // This is the asChild prop for SidebarMenuButton itself
+      renderAsSlot = false, // SidebarMenuButton's own decision to be a Slot
       isActive = false,
       variant = "default",
       size = "default",
       tooltip,
       className,
       children,
-      // All other props from parent (like href, onClick from Link) are in 'restProps'
-      ...restProps
+      ...restProps // Contains props from parent (e.g. Link), potentially including Link's asChild and href
     },
     ref
   ) => {
-    const { isMobile, state } = useSidebar();
-    
-    let elementToRender;
+    const { state, isMobile } = useSidebar();
 
-    // Check if 'href' is present in restProps, indicating it's likely used with <Link asChild>
-    const hasHref = typeof (restProps as any).href === 'string';
+    // Destructure `asChild` that might come from a parent <Link asChild>.
+    // This `asChildFromLink` prop should NOT be spread onto native DOM elements.
+    const { asChild: asChildFromLink, ...propsForElement } = restProps as any;
 
-    if (asChild && hasHref) {
-      // Scenario: <Link asChild href="..."> <SidebarMenuButton /> </Link>
-      // SidebarMenuButton's 'asChild' prop is true (passed from Link).
-      // It should render an 'a' tag directly, taking Link's props.
-      // The 'asChild' prop from Link is consumed here and NOT passed to the native 'a' tag.
-      elementToRender = (
-        <a
-          ref={ref as React.Ref<HTMLAnchorElement>}
-          className={cn(sidebarMenuButtonVariants({ variant, size, className }))}
-          data-sidebar="menu-button"
-          data-size={size}
-          data-active={isActive}
-          {...restProps} // Spread Link's props (href, onClick, etc.)
-        >
-          {children}
-        </a>
-      );
-    } else {
-      // Default behavior:
-      // - If 'asChild' is true (but not the Link scenario above, e.g. SidebarMenuButton asChild directly), render Slot.
-      // - Else if 'hasHref' is true (but 'asChild' from Link was false or not present), render 'a'.
-      // - Otherwise, render 'button'.
-      const Comp = asChild ? Slot : (hasHref ? "a" : "button");
-      elementToRender = (
-        <Comp
-          ref={ref as React.Ref<any>}
-          className={cn(sidebarMenuButtonVariants({ variant, size, className }))}
-          data-sidebar="menu-button"
-          data-size={size}
-          data-active={isActive}
-          {...restProps} // 'asChild' is not in restProps if it was the one determining 'Comp = Slot'
-        >
-          {children}
-        </Comp>
-      );
+    // Determine the component to render.
+    // If `renderAsSlot` is true, SidebarMenuButton itself is a Slot.
+    // Otherwise, if `href` is present (from Link), it's an 'a' tag.
+    // Otherwise, it's a 'button' tag.
+    const hasHref = typeof (propsForElement as any).href === 'string';
+    const Comp = renderAsSlot ? Slot : (hasHref ? "a" : "button");
+
+    const commonElementProps: any = {
+      // `propsForElement` already has `asChildFromLink` removed.
+      // It contains other props from parent (like href, onClick handlers from Link).
+      ...propsForElement,
+      className: cn(sidebarMenuButtonVariants({ variant, size, className })),
+      "data-sidebar": "menu-button",
+      "data-size": size,
+      "data-active": isActive,
+    };
+
+    // Set 'type="button"' for actual button elements if not already specified
+    if (Comp === "button" && !commonElementProps.type && !hasHref) {
+      commonElementProps.type = "button";
     }
+    
+    const mainElement = React.createElement(Comp, { ref, ...commonElementProps }, children);
 
     if (!tooltip) {
-      return elementToRender;
+      return mainElement;
     }
 
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          {elementToRender}
+          {mainElement}
         </TooltipTrigger>
         <TooltipContent
           side="right"
           align="center"
-          hidden={state !== "collapsed" || isMobile}
+          hidden={isMobile || state !== "collapsed"}
           {...(typeof tooltip === 'string' ? { children: tooltip } : tooltip)}
         />
       </Tooltip>
@@ -777,4 +777,3 @@ export {
   SidebarTrigger,
   useSidebar,
 }
-
