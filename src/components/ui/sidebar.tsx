@@ -538,29 +538,31 @@ const sidebarMenuButtonVariants = cva(
   }
 )
 
-interface SidebarMenuButtonConfigProps extends VariantProps<typeof sidebarMenuButtonVariants> {
-  renderAsSlot?: boolean;
+// Define the props for SidebarMenuButton
+// It accepts its own specific configuration props, standard HTML attributes,
+// and props that might be passed by a parent like <Link> (href, asChild for Link's behavior).
+interface SidebarMenuButtonSpecificProps extends VariantProps<typeof sidebarMenuButtonVariants> {
+  renderAsSlot?: boolean; // For SidebarMenuButton's own slot behavior decision
   isActive?: boolean;
   tooltip?: string | React.ComponentProps<typeof TooltipContent>;
-  children?: React.ReactNode;
-  className?: string;
+  // className and children are implicitly part of React.HTMLAttributes
 }
 
-interface ParentLinkProps {
-  href?: string;
-  asChild?: boolean; // Prop coming from <Link asChild>
-}
-
-// Combine with general HTML attributes, excluding those explicitly managed.
-type SidebarMenuButtonProps = SidebarMenuButtonConfigProps &
-  ParentLinkProps &
-  Omit<React.HTMLAttributes<HTMLElement>, keyof SidebarMenuButtonConfigProps | keyof ParentLinkProps>;
+type SidebarMenuButtonCombinedProps = SidebarMenuButtonSpecificProps &
+  Omit<React.HTMLAttributes<HTMLElement>, keyof SidebarMenuButtonSpecificProps | 'asChild'> & {
+    // Explicitly allow href and asChild to be passed from parent (e.g., Link)
+    // These will be handled and not necessarily spread directly if they conflict or need processing.
+    href?: string;
+    asChild?: boolean; // This is the 'asChild' prop from a parent like <Link asChild>
+  };
 
 
-const SidebarMenuButton = React.forwardRef<HTMLElement, SidebarMenuButtonProps>(
-  (props, ref) => {
+const SidebarMenuButton = React.forwardRef<HTMLElement, SidebarMenuButtonCombinedProps>(
+  (allProps, ref) => {
+    // Destructure all known/expected props.
+    // 'asChildFromParent' will capture the 'asChild' prop if passed by a parent (e.g., Link).
+    // 'renderAsSlot' is for this component's own decision to be a Slot.
     const {
-      // SidebarMenuButton's own configuration props
       renderAsSlot = false,
       isActive = false,
       variant,
@@ -568,37 +570,37 @@ const SidebarMenuButton = React.forwardRef<HTMLElement, SidebarMenuButtonProps>(
       tooltip,
       className,
       children,
-      // Props potentially passed from a parent component like <Link asChild>
-      href,
-      asChild: asChildFromParent, // This captures the asChild prop from the parent (e.g., Link)
-      // All other props (e.g., onClick, onMouseEnter, data-*, aria-*, etc.)
-      ...otherParentAndHtmlProps
-    } = props;
+      href: hrefFromParent,
+      asChild: asChildFromParent, // Capture asChild from parent
+      ...otherHtmlAttributes // All *other* HTML attributes (onClick, id, data-*, aria-*)
+    } = allProps;
 
     const { isMobile, state } = useSidebar();
 
     // Determine the component to render.
-    // If SidebarMenuButton's own renderAsSlot prop is true, it acts as a Slot.
-    // Else, if an href is provided (likely from a parent Link), it should be an anchor tag.
-    // Else, it defaults to a button.
-    const ActualComp = renderAsSlot ? Slot : href ? "a" : "button";
+    // 1. If renderAsSlot is true, SidebarMenuButton itself acts as a Slot.
+    // 2. Else, if hrefFromParent is present (passed from Link), render an 'a' tag.
+    // 3. Else, render a 'button' tag.
+    const ActualComp = renderAsSlot ? Slot : hrefFromParent ? "a" : "button";
 
-    // Prepare the props to be spread onto ActualComp.
-    // Crucially, otherParentAndHtmlProps already excludes `asChildFromParent` due to destructuring.
+    // Prepare props to be spread onto ActualComp.
+    // Crucially, 'otherHtmlAttributes' does NOT contain 'asChildFromParent' or 'hrefFromParent'
+    // because they were explicitly destructured above.
     const elementProps: React.HTMLAttributes<HTMLElement> & Record<string, any> = {
-      ...otherParentAndHtmlProps, // Spread the rest of the props.
-      ref, // Forward the ref to the ActualComp.
+      ...otherHtmlAttributes, // Spread the "clean" (non-conflicting) HTML attributes
+      ref,
       className: cn(sidebarMenuButtonVariants({ variant, size, className })),
       'data-sidebar': "menu-button",
       'data-size': size,
       'data-active': isActive,
     };
 
-    if (ActualComp === "a" && href) {
-      elementProps.href = href;
-    } else if (ActualComp === "button" && !href && !elementProps.type) {
-      // Default to type="button" for button elements if not specified.
-      elementProps.type = "button";
+    // Apply href specifically if rendering an anchor tag
+    if (ActualComp === "a" && hrefFromParent) {
+      (elementProps as React.AnchorHTMLAttributes<HTMLAnchorElement>).href = hrefFromParent;
+    } else if (ActualComp === "button" && !hrefFromParent && !(elementProps as React.ButtonHTMLAttributes<HTMLButtonElement>).type) {
+      // Default type for button if not a link and type isn't already set
+      (elementProps as React.ButtonHTMLAttributes<HTMLButtonElement>).type = "button";
     }
 
     const mainRenderedElement = React.createElement(ActualComp, elementProps, children);
@@ -792,4 +794,3 @@ export {
   SidebarTrigger,
   useSidebar,
 }
-
