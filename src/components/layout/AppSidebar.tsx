@@ -59,9 +59,8 @@ export function AppSidebar() {
         <SidebarMenu>
           {navItems.map((item) => (
             <SidebarMenuItem key={item.href}>
-              <Link href={item.href}>
+              <Link href={item.href} asChild>
                 <SidebarMenuButton
-                  asChild
                   isActive={pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href))}
                   tooltip={{ children: item.label, className: "bg-primary text-primary-foreground" }}
                   className="aria-[current=page]:bg-sidebar-primary aria-[current=page]:text-sidebar-primary-foreground"
@@ -82,9 +81,8 @@ export function AppSidebar() {
           <SidebarMenu>
             {bottomNavItems.map((item) => (
               <SidebarMenuItem key={item.href}>
-                <Link href={item.href}>
+                <Link href={item.href} asChild>
                   <SidebarMenuButton
-                    asChild
                     tooltip={{ children: item.label, className: "bg-primary text-primary-foreground" }}
                   >
                     <>
