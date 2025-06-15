@@ -533,57 +533,76 @@ const SidebarMenuButton = React.forwardRef<
 >(
   (
     {
-      asChild: useSlotOverride = false, 
+      asChild = false, // This is the asChild prop for SidebarMenuButton itself
       isActive = false,
       variant = "default",
       size = "default",
       tooltip,
       className,
       children,
-      ...restProps 
+      // All other props from parent (like href, onClick from Link) are in 'restProps'
+      ...restProps
     },
     ref
   ) => {
     const { isMobile, state } = useSidebar();
     
-    // Explicitly destructure and remove 'asChild' from restProps if it exists.
-    // This 'asChild' would be from a parent component like <Link asChild>.
-    const { asChild: _asChildFromParent, ...propsToSpread } = restProps;
+    let elementToRender;
 
-    const Comp = useSlotOverride ? Slot : "button";
+    // Check if 'href' is present in restProps, indicating it's likely used with <Link asChild>
+    const hasHref = typeof (restProps as any).href === 'string';
 
-    const buttonElement = (
-      <Comp
-        ref={ref as React.Ref<any>}
-        data-sidebar="menu-button"
-        data-size={size}
-        data-active={isActive}
-        className={cn(sidebarMenuButtonVariants({ variant, size }), className)}
-        {...propsToSpread} 
-      >
-        {children}
-      </Comp>
-    );
-
-    if (!tooltip) {
-      return buttonElement;
+    if (asChild && hasHref) {
+      // Scenario: <Link asChild href="..."> <SidebarMenuButton /> </Link>
+      // SidebarMenuButton's 'asChild' prop is true (passed from Link).
+      // It should render an 'a' tag directly, taking Link's props.
+      // The 'asChild' prop from Link is consumed here and NOT passed to the native 'a' tag.
+      elementToRender = (
+        <a
+          ref={ref as React.Ref<HTMLAnchorElement>}
+          className={cn(sidebarMenuButtonVariants({ variant, size, className }))}
+          data-sidebar="menu-button"
+          data-size={size}
+          data-active={isActive}
+          {...restProps} // Spread Link's props (href, onClick, etc.)
+        >
+          {children}
+        </a>
+      );
+    } else {
+      // Default behavior:
+      // - If 'asChild' is true (but not the Link scenario above, e.g. SidebarMenuButton asChild directly), render Slot.
+      // - Else if 'hasHref' is true (but 'asChild' from Link was false or not present), render 'a'.
+      // - Otherwise, render 'button'.
+      const Comp = asChild ? Slot : (hasHref ? "a" : "button");
+      elementToRender = (
+        <Comp
+          ref={ref as React.Ref<any>}
+          className={cn(sidebarMenuButtonVariants({ variant, size, className }))}
+          data-sidebar="menu-button"
+          data-size={size}
+          data-active={isActive}
+          {...restProps} // 'asChild' is not in restProps if it was the one determining 'Comp = Slot'
+        >
+          {children}
+        </Comp>
+      );
     }
 
-    let tooltipOptions: React.ComponentProps<typeof TooltipContent> = {};
-    if (typeof tooltip === "string") {
-      tooltipOptions = { children: tooltip };
-    } else {
-      tooltipOptions = tooltip;
+    if (!tooltip) {
+      return elementToRender;
     }
 
     return (
       <Tooltip>
-        <TooltipTrigger asChild>{buttonElement}</TooltipTrigger>
+        <TooltipTrigger asChild>
+          {elementToRender}
+        </TooltipTrigger>
         <TooltipContent
           side="right"
           align="center"
           hidden={state !== "collapsed" || isMobile}
-          {...tooltipOptions}
+          {...(typeof tooltip === 'string' ? { children: tooltip } : tooltip)}
         />
       </Tooltip>
     );
