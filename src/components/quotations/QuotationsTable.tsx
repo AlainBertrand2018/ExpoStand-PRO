@@ -8,11 +8,13 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Eye, Edit3, MoreHorizontal, CheckCircle, XCircle, Send as SendIcon, Mail, Info } from 'lucide-react';
 import type { Quotation } from '@/lib/types';
-import { QUOTATION_STATUSES, QuotationStatus } from '@/lib/constants';
+import { QUOTATION_STATUSES, QuotationStatus, COMPANY_DETAILS } from '@/lib/constants';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { getMockQuotationById } from '@/lib/mockData';
+import { generatePdfDocument } from '@/lib/pdfGenerator';
 
 interface QuotationsTableProps {
   quotations: Quotation[];
@@ -35,20 +37,62 @@ export function QuotationsTable({ quotations, onUpdateStatus, isLoading }: Quota
     );
   }
 
-  const handleSendQuotationPdf = (quotationId: string, clientEmail: string | undefined, clientName: string) => {
+  const handleSendQuotationPdf = async (quotationId: string, clientEmail: string | undefined, clientName: string) => {
     if (!clientEmail) {
       toast({
-        title: "Cannot Send PDF",
+        title: "Cannot Prepare Email",
         description: `Client email is missing for quotation ${quotationId}. Please edit the quotation to add an email address.`,
         variant: "destructive",
       });
       return;
     }
-    toast({
-      title: "Simulate Sending PDF",
-      description: `Quotation PDF for ${quotationId} would be sent to ${clientName} (${clientEmail}) from marketing@fids-maurice.online.`,
-      duration: 5000,
-    });
+
+    try {
+      const quotation = await getMockQuotationById(quotationId);
+      if (!quotation) {
+        toast({
+          title: "Error",
+          description: `Quotation ${quotationId} not found.`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Generate and trigger download of the PDF
+      generatePdfDocument(quotation, 'Quotation');
+      toast({
+        title: "PDF Downloading",
+        description: `Quotation ${quotation.id}.pdf is downloading. Please attach it to the email.`,
+        duration: 7000,
+      });
+
+      // Prepare mailto link
+      const subject = encodeURIComponent(`Quotation ${quotation.id} from ${COMPANY_DETAILS.name}`);
+      const body = encodeURIComponent(
+`Dear ${clientName},
+
+Please find our quotation ${quotation.id} attached.
+
+If the PDF did not download automatically, please check your browser's downloads.
+
+We look forward to hearing from you.
+
+Best regards,
+The Team at ${COMPANY_DETAILS.name}
+(via ExpoStand Pro)
+${COMPANY_DETAILS.email}`
+      );
+      
+      window.location.href = `mailto:${clientEmail}?subject=${subject}&body=${body}`;
+
+    } catch (error) {
+      console.error("Error preparing quotation email:", error);
+      toast({
+        title: "Error",
+        description: "Could not prepare the email for the quotation.",
+        variant: "destructive",
+      });
+    }
   };
 
   const getStatusBadgeVariant = (status: QuotationStatus) => {

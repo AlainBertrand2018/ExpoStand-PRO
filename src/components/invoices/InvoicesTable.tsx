@@ -8,13 +8,13 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Eye, MoreHorizontal, Send, CreditCard, Mail } from 'lucide-react';
 import type { Invoice } from '@/lib/types';
-import { INVOICE_PAYMENT_STATUSES, InvoicePaymentStatus } from '@/lib/constants';
+import { INVOICE_PAYMENT_STATUSES, InvoicePaymentStatus, COMPANY_DETAILS } from '@/lib/constants';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-// import { getMockInvoiceById } from '@/lib/mockData'; // Not needed if we don't generate PDF here
-// import { generatePdfDocument } from '@/lib/pdfGenerator'; // Not needed if we don't generate PDF here
+import { getMockInvoiceById } from '@/lib/mockData';
+import { generatePdfDocument } from '@/lib/pdfGenerator';
 
 
 interface InvoicesTableProps {
@@ -38,22 +38,62 @@ export function InvoicesTable({ invoices, onUpdatePaymentStatus, isLoading }: In
     );
   }
 
-  const handleSendInvoicePdf = (invoiceId: string, clientEmail: string | undefined, clientName: string) => {
+  const handleSendInvoicePdf = async (invoiceId: string, clientEmail: string | undefined, clientName: string) => {
     if (!clientEmail) {
       toast({
-        title: "Cannot Send PDF",
+        title: "Cannot Prepare Email",
         description: `Client email is missing for invoice ${invoiceId}. Please check the original quotation or client details.`,
         variant: "destructive",
       });
       return;
     }
-    // In a real app, you might fetch the full invoice data here if needed, then generate PDF, then use a backend service to email.
-    // For this prototype, we'll just show a toast.
-    toast({
-      title: "Simulate Sending PDF",
-      description: `Invoice PDF for ${invoiceId} would be sent to ${clientName} (${clientEmail}) from marketing@fids-maurice.online.`,
-      duration: 5000,
-    });
+
+    try {
+      const invoice = await getMockInvoiceById(invoiceId);
+      if (!invoice) {
+        toast({
+          title: "Error",
+          description: `Invoice ${invoiceId} not found.`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Generate and trigger download of the PDF
+      generatePdfDocument(invoice, 'Invoice');
+      toast({
+        title: "PDF Downloading",
+        description: `Invoice ${invoice.id}.pdf is downloading. Please attach it to the email.`,
+        duration: 7000,
+      });
+
+      // Prepare mailto link
+      const subject = encodeURIComponent(`Invoice ${invoice.id} from ${COMPANY_DETAILS.name}`);
+      const body = encodeURIComponent(
+`Dear ${clientName},
+
+Please find your invoice ${invoice.id} attached.
+
+If the PDF did not download automatically, please check your browser's downloads.
+
+Thank you for your business.
+
+Sincerely,
+The Team at ${COMPANY_DETAILS.name}
+(via ExpoStand Pro)
+${COMPANY_DETAILS.email}`
+      );
+      
+      window.location.href = `mailto:${clientEmail}?subject=${subject}&body=${body}`;
+
+    } catch (error) {
+      console.error("Error preparing invoice email:", error);
+      toast({
+        title: "Error",
+        description: "Could not prepare the email for the invoice.",
+        variant: "destructive",
+      });
+    }
   };
   
   return (
