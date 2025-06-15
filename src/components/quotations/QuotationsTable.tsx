@@ -1,3 +1,4 @@
+
 "use client";
 import React from 'react';
 import Link from 'next/link';
@@ -5,12 +6,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Eye, Edit3, MoreHorizontal, CheckCircle, XCircle, Send as SendIcon } from 'lucide-react';
+import { Eye, Edit3, MoreHorizontal, CheckCircle, XCircle, Send as SendIcon, Mail } from 'lucide-react';
 import type { Quotation } from '@/lib/types';
 import { QUOTATION_STATUSES, QuotationStatus } from '@/lib/constants';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { FileText } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface QuotationsTableProps {
   quotations: Quotation[];
@@ -19,6 +21,8 @@ interface QuotationsTableProps {
 }
 
 export function QuotationsTable({ quotations, onUpdateStatus, isLoading }: QuotationsTableProps) {
+  const { toast } = useToast();
+
   if (!isLoading && quotations.length === 0) {
     return (
       <EmptyState
@@ -30,6 +34,21 @@ export function QuotationsTable({ quotations, onUpdateStatus, isLoading }: Quota
       />
     );
   }
+
+  const handleSendQuotationPdf = (quotationId: string, clientEmail: string | undefined) => {
+    if (!clientEmail) {
+      toast({
+        title: "Cannot Send PDF",
+        description: `Client email is missing for quotation ${quotationId}.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    toast({
+      title: "Send PDF (Placeholder)",
+      description: `Quotation ${quotationId} PDF would be sent to ${clientEmail} from marketing@fids-maurice.online.`,
+    });
+  };
 
   return (
     <div className="rounded-lg border overflow-hidden bg-card shadow-md">
@@ -88,7 +107,10 @@ export function QuotationsTable({ quotations, onUpdateStatus, isLoading }: Quota
                         <Eye className="mr-2 h-4 w-4" /> View
                       </Link>
                     </DropdownMenuItem>
-                    {/* <DropdownMenuItem disabled> // Edit not implemented in this pass
+                    <DropdownMenuItem onClick={() => handleSendQuotationPdf(quotation.id, quotation.clientEmail)}>
+                      <Mail className="mr-2 h-4 w-4" /> Send PDF
+                    </DropdownMenuItem>
+                    {/* <DropdownMenuItem disabled> 
                       <Edit3 className="mr-2 h-4 w-4" /> Edit
                     </DropdownMenuItem> */}
                     <DropdownMenuSeparator />

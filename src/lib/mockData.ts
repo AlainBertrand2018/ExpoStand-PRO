@@ -1,3 +1,4 @@
+
 import type { Quotation, Invoice } from './types';
 import { STAND_TYPES, VAT_RATE } from './constants';
 import { generateQuotationId, generateInvoiceId, formatDate } from './utils';
@@ -42,10 +43,13 @@ export const mockQuotations: Quotation[] = [
     clientName: "TechCorp Solutions",
     clientCompany: "TechCorp Ltd.",
     clientEmail: "contact@techcorp.com",
+    clientPhone: "+230 5555 0101",
+    clientAddress: "1 Cybercity, Ebene",
+    clientBRN: "C10012345",
     quotationDate: today.toISOString(),
     expiryDate: nextWeek.toISOString(),
     items: createMockItems(2),
-    ...calculateTotals(createMockItems(2)), // Recalculate with same items for consistency, or store items first
+    ...calculateTotals(createMockItems(2)), 
     status: "Sent",
     currency: "MUR",
     notes: "Early bird discount applied.",
@@ -55,7 +59,10 @@ export const mockQuotations: Quotation[] = [
     clientName: "Alice Wonderland",
     clientCompany: "Foodies Delight",
     clientEmail: "alice@foodies.com",
-    quotationDate: new Date(today.setDate(today.getDate() - 5)).toISOString(),
+    clientPhone: "+230 5555 0202",
+    clientAddress: "2 Coast Road, Flic en Flac",
+    clientBRN: "C20056789",
+    quotationDate: new Date(new Date().setDate(new Date().getDate() - 5)).toISOString(),
     expiryDate: tomorrow.toISOString(),
     items: createMockItems(1),
     ...calculateTotals(createMockItems(1)),
@@ -66,8 +73,11 @@ export const mockQuotations: Quotation[] = [
     id: generateQuotationId("Innovate"),
     clientName: "Innovate Hub",
     clientEmail: "info@innovate.mu",
-    quotationDate: new Date(today.setDate(today.getDate() - 10)).toISOString(),
-    expiryDate: new Date(today.setDate(today.getDate() - 3)).toISOString(), // Expired
+    clientPhone: "+230 5555 0303",
+    clientAddress: "3 Innovation Drive, Moka",
+    clientBRN: "C30098765",
+    quotationDate: new Date(new Date().setDate(new Date().getDate() - 10)).toISOString(),
+    expiryDate: new Date(new Date().setDate(new Date().getDate() - 3)).toISOString(), 
     items: createMockItems(3),
     ...calculateTotals(createMockItems(3)),
     status: "Rejected",
@@ -76,45 +86,71 @@ export const mockQuotations: Quotation[] = [
   },
 ];
 
-// Update items to be consistent for mockQuotations
 mockQuotations.forEach(q => {
-  const { subTotal, vatAmount, grandTotal } = calculateTotals(q.items);
+  const tempItems = q.items; // Use existing items for calculation
+  const { subTotal, vatAmount, grandTotal } = calculateTotals(tempItems);
   q.subTotal = subTotal;
   q.vatAmount = vatAmount;
   q.grandTotal = grandTotal;
 });
 
+const wonQuotationForInvoice = mockQuotations.find(q => q.status === "Won");
+let invoiceItems = createMockItems(1);
+let invoiceClientDetails = {
+    clientName: "Global Biz Ltd.",
+    clientEmail: "global@biz.com",
+    clientPhone: "+230 5555 0404",
+    clientAddress: "4 Business Park, Port Louis",
+    clientBRN: "C40011223",
+    clientCompany: "Global Biz Co"
+};
+
+if (wonQuotationForInvoice) {
+    invoiceItems = wonQuotationForInvoice.items;
+    invoiceClientDetails = {
+        clientName: wonQuotationForInvoice.clientName,
+        clientCompany: wonQuotationForInvoice.clientCompany,
+        clientEmail: wonQuotationForInvoice.clientEmail,
+        clientPhone: wonQuotationForInvoice.clientPhone,
+        clientAddress: wonQuotationForInvoice.clientAddress,
+        clientBRN: wonQuotationForInvoice.clientBRN,
+    };
+}
+
 
 export const mockInvoices: Invoice[] = [
   {
-    id: generateInvoiceId("Foodies"),
-    quotationId: mockQuotations.find(q => q.status === "Won")?.id,
-    clientName: "Alice Wonderland",
-    clientCompany: "Foodies Delight",
-    clientEmail: "alice@foodies.com",
-    invoiceDate: new Date(today.setDate(today.getDate() - 4)).toISOString(), // Assuming won 4 days ago
+    id: generateInvoiceId(invoiceClientDetails.clientName),
+    quotationId: wonQuotationForInvoice?.id,
+    ...invoiceClientDetails,
+    invoiceDate: new Date(new Date().setDate(new Date().getDate() - 4)).toISOString(),
     dueDate: nextMonth.toISOString(),
-    items: mockQuotations.find(q => q.status === "Won")?.items || createMockItems(1),
-    ...calculateTotals(mockQuotations.find(q => q.status === "Won")?.items || createMockItems(1)),
+    items: invoiceItems,
+    ...calculateTotals(invoiceItems),
     paymentStatus: "Unpaid",
     currency: "MUR",
   },
   {
-    id: generateInvoiceId("GlobalBiz"),
-    clientName: "Global Biz Ltd.",
-    invoiceDate: new Date(today.setDate(today.getDate() - 30)).toISOString(),
-    dueDate: today.toISOString(), // Due today
+    id: generateInvoiceId("General Electrics"),
+    clientName: "General Electrics Ltd.",
+    clientEmail: "contact@generalelectrics.com",
+    clientPhone: "+230 5555 0505",
+    clientAddress: "5 Industrial Zone, Pailles",
+    clientBRN: "C50033445",
+    clientCompany: "GE Inc.",
+    invoiceDate: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString(),
+    dueDate: today.toISOString(), 
     items: createMockItems(2),
-    ...calculateTotals(createMockItems(2)),
+    ...calculateTotals(createMockItems(2)), // Recalculate with its own items
     paymentStatus: "Unpaid",
     currency: "MUR",
     notes: "Payment reminder sent.",
   },
 ];
 
-// Update items to be consistent for mockInvoices
 mockInvoices.forEach(inv => {
-  const { subTotal, vatAmount, grandTotal } = calculateTotals(inv.items);
+  const tempItems = inv.items; // Use existing items for calculation
+  const { subTotal, vatAmount, grandTotal } = calculateTotals(tempItems);
   inv.subTotal = subTotal;
   inv.vatAmount = vatAmount;
   inv.grandTotal = grandTotal;
@@ -122,7 +158,7 @@ mockInvoices.forEach(inv => {
 
 
 export const getMockQuotations = async (): Promise<Quotation[]> => {
-  return new Promise(resolve => setTimeout(() => resolve(mockQuotations), 500));
+  return new Promise(resolve => setTimeout(() => resolve([...mockQuotations]), 500));
 };
 
 export const getMockQuotationById = async (id: string): Promise<Quotation | undefined> => {
@@ -134,26 +170,29 @@ export const addMockQuotation = async (quotation: Omit<Quotation, 'id' | 'quotat
     ...quotation,
     id: generateQuotationId(quotation.clientName),
     quotationDate: new Date().toISOString(),
-    expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days expiry
+    expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), 
   };
   mockQuotations.unshift(newQuotation);
   return new Promise(resolve => setTimeout(() => resolve(newQuotation), 300));
 };
 
 export const updateMockQuotationStatus = async (id: string, status: import('./constants').QuotationStatus): Promise<Quotation | undefined> => {
-  const quotation = mockQuotations.find(q => q.id === id);
-  if (quotation) {
-    quotation.status = status;
+  const quotationIndex = mockQuotations.findIndex(q => q.id === id);
+  if (quotationIndex > -1) {
+    mockQuotations[quotationIndex].status = status;
+    const quotation = mockQuotations[quotationIndex];
     if (status === 'Won' && !mockInvoices.find(inv => inv.quotationId === id)) {
-      // Auto-generate invoice
       const newInvoice: Invoice = {
         id: generateInvoiceId(quotation.clientName),
         quotationId: quotation.id,
         clientName: quotation.clientName,
         clientCompany: quotation.clientCompany,
         clientEmail: quotation.clientEmail,
+        clientPhone: quotation.clientPhone,
+        clientAddress: quotation.clientAddress,
+        clientBRN: quotation.clientBRN,
         invoiceDate: new Date().toISOString(),
-        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days due
+        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), 
         items: quotation.items,
         subTotal: quotation.subTotal,
         vatAmount: quotation.vatAmount,
@@ -164,13 +203,14 @@ export const updateMockQuotationStatus = async (id: string, status: import('./co
       };
       mockInvoices.unshift(newInvoice);
     }
+    return new Promise(resolve => setTimeout(() => resolve(quotation), 300));
   }
-  return new Promise(resolve => setTimeout(() => resolve(quotation), 300));
+  return new Promise(resolve => setTimeout(() => resolve(undefined), 300));
 };
 
 
 export const getMockInvoices = async (): Promise<Invoice[]> => {
-  return new Promise(resolve => setTimeout(() => resolve(mockInvoices), 500));
+  return new Promise(resolve => setTimeout(() => resolve([...mockInvoices]), 500));
 };
 
 export const getMockInvoiceById = async (id: string): Promise<Invoice | undefined> => {

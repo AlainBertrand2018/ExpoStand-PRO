@@ -29,7 +29,10 @@ const quotationItemSchema = z.object({
 const quotationFormSchema = z.object({
   clientName: z.string().min(1, "Client name is required"),
   clientCompany: z.string().optional(),
-  clientEmail: z.string().email("Invalid email address").optional(),
+  clientEmail: z.string().email("Invalid email address").min(1, "Client email is required"),
+  clientPhone: z.string().optional(),
+  clientAddress: z.string().optional(),
+  clientBRN: z.string().optional(),
   items: z.array(quotationItemSchema).min(1, "At least one item is required"),
   notes: z.string().optional(),
   status: z.enum(QUOTATION_STATUSES).default('Sent'),
@@ -39,7 +42,7 @@ const quotationFormSchema = z.object({
 type QuotationFormValues = z.infer<typeof quotationFormSchema>;
 
 interface QuotationFormProps {
-  initialData?: Quotation; // For editing, not implemented in this pass
+  initialData?: Quotation; 
   onSave?: (data: Quotation) => Promise<void>;
 }
 
@@ -51,9 +54,7 @@ export function QuotationForm({ initialData, onSave }: QuotationFormProps) {
   const form = useForm<QuotationFormValues>({
     resolver: zodResolver(quotationFormSchema),
     defaultValues: initialData ? {
-      clientName: initialData.clientName,
-      clientCompany: initialData.clientCompany,
-      clientEmail: initialData.clientEmail,
+      ...initialData,
       items: initialData.items.map(item => ({
         standTypeId: item.standTypeId,
         description: item.description || STAND_TYPES.find(s => s.id === item.standTypeId)?.name || '',
@@ -61,13 +62,13 @@ export function QuotationForm({ initialData, onSave }: QuotationFormProps) {
         unitPrice: item.unitPrice,
         total: item.total
       })),
-      notes: initialData.notes,
-      status: initialData.status,
-      currency: initialData.currency,
     } : {
       clientName: '',
       clientCompany: '',
       clientEmail: '',
+      clientPhone: '',
+      clientAddress: '',
+      clientBRN: '',
       items: [{ standTypeId: '', description: '', quantity: 1, unitPrice: 0, total: 0 }],
       notes: '',
       status: 'Sent',
@@ -161,11 +162,9 @@ export function QuotationForm({ initialData, onSave }: QuotationFormProps) {
 
     try {
       if (onSave) {
-        // This path is for editing, not fully implemented
-        // await onSave(quotationData as Quotation); // Needs full Quotation type
+        // await onSave(quotationData as Quotation); 
       } else {
-        // Creating new quotation
-        const newQuotation = await addMockQuotation(quotationData); // Use the server action/API call
+        const newQuotation = await addMockQuotation(quotationData); 
         toast({
           title: "Quotation Created",
           description: `Quotation ${newQuotation.id} has been successfully created.`,
@@ -223,9 +222,48 @@ export function QuotationForm({ initialData, onSave }: QuotationFormProps) {
               name="clientEmail"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Client Email</FormLabel>
+                  <FormLabel>Client Email*</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="Enter client email (optional)" {...field} />
+                    <Input type="email" placeholder="Enter client email" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="clientBRN"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Client BRN</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter client BRN (optional)" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="clientPhone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Mobile Number</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter mobile number (optional)" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="clientAddress"
+              render={({ field }) => (
+                <FormItem className="md:col-span-2">
+                  <FormLabel>Address</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Enter client address (optional)" {...field} rows={3}/>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -275,7 +313,7 @@ export function QuotationForm({ initialData, onSave }: QuotationFormProps) {
                   control={form.control}
                   name={`items.${index}.description`}
                   render={({ field }) => (
-                    <FormItem className="md:col-span-3 hidden md:block"> {/* Hidden on mobile, as it's auto-filled */}
+                    <FormItem className="md:col-span-3 hidden md:block">
                       <FormLabel>Description</FormLabel>
                        <FormControl>
                         <Input placeholder="Stand description" {...field} readOnly />
@@ -295,10 +333,6 @@ export function QuotationForm({ initialData, onSave }: QuotationFormProps) {
                           placeholder="1" 
                           {...controllerField} 
                           onChange={(e) => {
-                            // Pass the raw value or parsed number to controllerField.onChange
-                            // Let RHF handle validation based on schema (z.number().min(1))
-                            // parseFloat is better here to allow for potential decimal quantities if requirements change
-                            // but schema expects integer, so parseInt is fine
                             const value = e.target.value;
                             controllerField.onChange(value === '' ? undefined : parseInt(value, 10));
                             handleQuantityChange(index, value === '' ? 1 : parseInt(value, 10));
@@ -327,7 +361,7 @@ export function QuotationForm({ initialData, onSave }: QuotationFormProps) {
                             controllerField.onChange(value === '' ? undefined : parseFloat(value));
                             handleUnitPriceChange(index, value === '' ? 0 : parseFloat(value));
                           }}
-                          readOnly={!STAND_TYPES.find(st => st.id === watchedItems[index]?.standTypeId)?.remarks?.includes("Revenue sharing")} // Allow edit for revenue sharing types
+                          readOnly={!STAND_TYPES.find(st => st.id === watchedItems[index]?.standTypeId)?.remarks?.includes("Revenue sharing")}
                         />
                       </FormControl>
                       <FormMessage />
@@ -417,5 +451,3 @@ export function QuotationForm({ initialData, onSave }: QuotationFormProps) {
     </Form>
   );
 }
-
-    

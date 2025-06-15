@@ -1,3 +1,4 @@
+
 "use client";
 import React from 'react';
 import Link from 'next/link';
@@ -5,21 +6,24 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Eye, MoreHorizontal, Send, CreditCard } from 'lucide-react';
+import { Eye, MoreHorizontal, Send, CreditCard, Mail } from 'lucide-react';
 import type { Invoice } from '@/lib/types';
 import { INVOICE_PAYMENT_STATUSES, InvoicePaymentStatus } from '@/lib/constants';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { FileText } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 
 interface InvoicesTableProps {
   invoices: Invoice[];
-  onUpdatePaymentStatus?: (id: string, status: InvoicePaymentStatus) => void; // Optional for now
+  onUpdatePaymentStatus?: (id: string, status: InvoicePaymentStatus) => void; 
   isLoading?: boolean;
 }
 
 export function InvoicesTable({ invoices, onUpdatePaymentStatus, isLoading }: InvoicesTableProps) {
+  const { toast } = useToast();
+
   if (!isLoading && invoices.length === 0) {
     return (
       <EmptyState
@@ -31,6 +35,21 @@ export function InvoicesTable({ invoices, onUpdatePaymentStatus, isLoading }: In
       />
     );
   }
+
+  const handleSendInvoicePdf = (invoiceId: string, clientEmail: string | undefined) => {
+    if (!clientEmail) {
+      toast({
+        title: "Cannot Send PDF",
+        description: `Client email is missing for invoice ${invoiceId}.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    toast({
+      title: "Send PDF (Placeholder)",
+      description: `Invoice ${invoiceId} PDF would be sent to ${clientEmail} from marketing@fids-maurice.online.`,
+    });
+  };
   
   return (
     <div className="rounded-lg border overflow-hidden bg-card shadow-md">
@@ -92,6 +111,9 @@ export function InvoicesTable({ invoices, onUpdatePaymentStatus, isLoading }: In
                         <Eye className="mr-2 h-4 w-4" /> View
                       </Link>
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleSendInvoicePdf(invoice.id, invoice.clientEmail)}>
+                      <Mail className="mr-2 h-4 w-4" /> Send PDF
+                    </DropdownMenuItem>
                     {onUpdatePaymentStatus && (
                       <>
                         <DropdownMenuSeparator />
@@ -104,7 +126,7 @@ export function InvoicesTable({ invoices, onUpdatePaymentStatus, isLoading }: In
                             className="capitalize"
                           >
                             {status === 'Paid' && <CreditCard className="mr-2 h-4 w-4 text-green-500" />}
-                            {status === 'Unpaid' && <Send className="mr-2 h-4 w-4" />} {/* Icon for unpaid could be Send (reminder) */}
+                            {status === 'Unpaid' && <Send className="mr-2 h-4 w-4" />} 
                             {status === 'Overdue' && <CreditCard className="mr-2 h-4 w-4 text-red-500" />}
                             Mark as {status}
                           </DropdownMenuItem>

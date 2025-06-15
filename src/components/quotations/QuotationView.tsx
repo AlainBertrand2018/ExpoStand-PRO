@@ -20,7 +20,6 @@ export function QuotationView({ quotation }: QuotationViewProps) {
   const { toast } = useToast();
 
   const handleDownloadPdf = () => {
-    // Placeholder for PDF generation
     toast({
       title: "PDF Download (Placeholder)",
       description: "Actual PDF generation would occur here.",
@@ -28,12 +27,11 @@ export function QuotationView({ quotation }: QuotationViewProps) {
   };
   
   const handlePrint = () => {
-     // Placeholder for Print functionality
     toast({
       title: "Print (Placeholder)",
       description: "This would trigger the browser's print dialog.",
     });
-    // window.print(); // Uncomment for actual print functionality
+    // window.print(); 
   }
 
   return (
@@ -57,7 +55,10 @@ export function QuotationView({ quotation }: QuotationViewProps) {
           <h3 className="font-semibold text-lg mb-1">Bill To:</h3>
           <p className="font-medium">{quotation.clientName}</p>
           {quotation.clientCompany && <p>{quotation.clientCompany}</p>}
-          {quotation.clientEmail && <p>{quotation.clientEmail}</p>}
+          <p>Email: {quotation.clientEmail}</p>
+          {quotation.clientPhone && <p>Phone: {quotation.clientPhone}</p>}
+          {quotation.clientAddress && <p>Address: {quotation.clientAddress}</p>}
+          {quotation.clientBRN && <p>BRN: {quotation.clientBRN}</p>}
         </div>
 
         <Table className="mb-6">

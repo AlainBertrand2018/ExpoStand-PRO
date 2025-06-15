@@ -1,11 +1,13 @@
+
 import type { QuotationStatus, InvoicePaymentStatus, StandType } from "./constants";
 
 export interface ClientDetails {
   clientName: string;
   clientCompany?: string;
-  clientEmail?: string;
-  clientPhone?: string;
-  clientAddress?: string;
+  clientEmail: string; // Made mandatory
+  clientPhone?: string; // Added
+  clientAddress?: string; // Added
+  clientBRN?: string; // Added
 }
 
 export interface DocumentItem {

@@ -20,7 +20,6 @@ export function InvoiceView({ invoice }: InvoiceViewProps) {
   const { toast } = useToast();
 
   const handleDownloadPdf = () => {
-    // Placeholder for PDF generation
     toast({
       title: "PDF Download (Placeholder)",
       description: "Actual PDF generation would occur here.",
@@ -28,12 +27,11 @@ export function InvoiceView({ invoice }: InvoiceViewProps) {
   };
 
   const handlePrint = () => {
-     // Placeholder for Print functionality
     toast({
       title: "Print (Placeholder)",
       description: "This would trigger the browser's print dialog.",
     });
-    // window.print(); // Uncomment for actual print functionality
+    // window.print(); 
   }
 
   return (
@@ -49,7 +47,7 @@ export function InvoiceView({ invoice }: InvoiceViewProps) {
           <div className="text-sm text-right mt-2 sm:mt-0 space-y-1">
             <p><strong>Date Issued:</strong> {formatDate(invoice.invoiceDate)}</p>
             <p><strong>Due Date:</strong> {formatDate(invoice.dueDate)}</p>
-            <div><strong>Status:</strong> <Badge variant={invoice.paymentStatus === 'Paid' ? 'default' : invoice.paymentStatus === 'Unpaid' ? 'secondary' : 'destructive'} className="capitalize text-sm ml-1">{invoice.paymentStatus}</Badge></div>
+            <div className="flex items-center justify-end"><strong>Status:</strong> <Badge variant={invoice.paymentStatus === 'Paid' ? 'default' : invoice.paymentStatus === 'Unpaid' ? 'secondary' : 'destructive'} className="capitalize text-sm ml-1">{invoice.paymentStatus}</Badge></div>
           </div>
         </div>
       </CardHeader>
@@ -58,7 +56,10 @@ export function InvoiceView({ invoice }: InvoiceViewProps) {
           <h3 className="font-semibold text-lg mb-1">Bill To:</h3>
           <p className="font-medium">{invoice.clientName}</p>
           {invoice.clientCompany && <p>{invoice.clientCompany}</p>}
-          {invoice.clientEmail && <p>{invoice.clientEmail}</p>}
+          <p>Email: {invoice.clientEmail}</p>
+          {invoice.clientPhone && <p>Phone: {invoice.clientPhone}</p>}
+          {invoice.clientAddress && <p>Address: {invoice.clientAddress}</p>}
+          {invoice.clientBRN && <p>BRN: {invoice.clientBRN}</p>}
         </div>
 
         <Table className="mb-6">
