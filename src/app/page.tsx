@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Rocket, FileText, Bot } from "lucide-react";
@@ -38,8 +39,7 @@ export default function HomePage() {
       </Link>
 
       <footer className="mt-16 text-center text-foreground/60">
-        <p>&copy; {new Date().getFullYear()} ExpoStand Pro. All rights reserved.</p>
-        <p>Festival International Des Saveurs Ltd.</p>
+        <p>&copy; 2025 ExpoStand Pro (Sales Management Systems) - Alain BERTRAND All rights reserved.</p>
       </footer>
     </div>
   );
