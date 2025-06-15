@@ -1,3 +1,4 @@
+
 "use client";
 import React from 'react';
 import type { Quotation } from '@/lib/types';
@@ -44,10 +45,10 @@ export function QuotationView({ quotation }: QuotationViewProps) {
             <CardTitle className="text-2xl font-bold text-primary mb-1">Quotation</CardTitle>
             <CardDescription>ID: {quotation.id}</CardDescription>
           </div>
-          <div className="text-sm text-right mt-2 sm:mt-0">
+          <div className="text-sm text-right mt-2 sm:mt-0 space-y-1">
             <p><strong>Date:</strong> {formatDate(quotation.quotationDate)}</p>
             <p><strong>Expires:</strong> {formatDate(quotation.expiryDate)}</p>
-            <p><strong>Status:</strong> <Badge variant={quotation.status === 'Won' ? 'default' : quotation.status === 'Sent' ? 'secondary' : 'destructive'} className="capitalize text-sm">{quotation.status}</Badge></p>
+            <div><strong>Status:</strong> <Badge variant={quotation.status === 'Won' ? 'default' : quotation.status === 'Sent' ? 'secondary' : 'destructive'} className="capitalize text-sm ml-1">{quotation.status}</Badge></div>
           </div>
         </div>
       </CardHeader>

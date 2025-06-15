@@ -1,3 +1,4 @@
+
 "use client";
 import React from 'react';
 import type { Invoice } from '@/lib/types';
@@ -45,10 +46,10 @@ export function InvoiceView({ invoice }: InvoiceViewProps) {
             <CardDescription>ID: {invoice.id}</CardDescription>
             {invoice.quotationId && <CardDescription>Ref Quotation: {invoice.quotationId}</CardDescription>}
           </div>
-          <div className="text-sm text-right mt-2 sm:mt-0">
+          <div className="text-sm text-right mt-2 sm:mt-0 space-y-1">
             <p><strong>Date Issued:</strong> {formatDate(invoice.invoiceDate)}</p>
             <p><strong>Due Date:</strong> {formatDate(invoice.dueDate)}</p>
-            <p><strong>Status:</strong> <Badge variant={invoice.paymentStatus === 'Paid' ? 'default' : invoice.paymentStatus === 'Unpaid' ? 'secondary' : 'destructive'} className="capitalize text-sm">{invoice.paymentStatus}</Badge></p>
+            <div><strong>Status:</strong> <Badge variant={invoice.paymentStatus === 'Paid' ? 'default' : invoice.paymentStatus === 'Unpaid' ? 'secondary' : 'destructive'} className="capitalize text-sm ml-1">{invoice.paymentStatus}</Badge></div>
           </div>
         </div>
       </CardHeader>
