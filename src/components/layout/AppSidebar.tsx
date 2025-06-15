@@ -67,10 +67,10 @@ export function AppSidebar() {
                   className="aria-[current=page]:bg-sidebar-primary aria-[current=page]:text-sidebar-primary-foreground"
                   aria-current={pathname.startsWith(item.href) ? "page" : undefined}
                 >
-                  <a>
+                  <>
                     <item.icon />
                     <span>{item.label}</span>
-                  </a>
+                  </>
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
@@ -83,14 +83,14 @@ export function AppSidebar() {
             {bottomNavItems.map((item) => (
               <SidebarMenuItem key={item.href}>
                 <Link href={item.href}>
-                  <SidebarMenuButton 
-                    asChild 
+                  <SidebarMenuButton
+                    asChild
                     tooltip={{ children: item.label, className: "bg-primary text-primary-foreground" }}
                   >
-                    <a>
+                    <>
                       <item.icon />
                       <span>{item.label}</span>
-                    </a>
+                    </>
                   </SidebarMenuButton>
                 </Link>
               </SidebarMenuItem>
