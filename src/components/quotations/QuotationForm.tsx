@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useState, useEffect, useCallback } from 'react';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
@@ -53,7 +54,13 @@ export function QuotationForm({ initialData, onSave }: QuotationFormProps) {
       clientName: initialData.clientName,
       clientCompany: initialData.clientCompany,
       clientEmail: initialData.clientEmail,
-      items: initialData.items.map(item => ({...item, description: item.description || STAND_TYPES.find(s => s.id === item.standTypeId)?.name || ''})),
+      items: initialData.items.map(item => ({
+        standTypeId: item.standTypeId,
+        description: item.description || STAND_TYPES.find(s => s.id === item.standTypeId)?.name || '',
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        total: item.total
+      })),
       notes: initialData.notes,
       status: initialData.status,
       currency: initialData.currency,
@@ -91,32 +98,48 @@ export function QuotationForm({ initialData, onSave }: QuotationFormProps) {
   const handleStandTypeChange = (index: number, standTypeId: string) => {
     const selectedStand = STAND_TYPES.find(s => s.id === standTypeId);
     if (selectedStand) {
-      const quantity = fields[index].quantity || 1;
+      const currentQuantity = form.getValues(`items.${index}.quantity`) || 1;
       update(index, {
-        ...fields[index],
         standTypeId: selectedStand.id,
         description: selectedStand.name,
+        quantity: currentQuantity,
         unitPrice: selectedStand.unitPrice,
-        total: quantity * selectedStand.unitPrice,
+        total: currentQuantity * selectedStand.unitPrice,
       });
     }
   };
 
-  const handleQuantityChange = (index: number, quantity: number) => {
-    const unitPrice = fields[index].unitPrice || 0;
+  const handleQuantityChange = (index: number, quantityInput: number | string) => {
+    const numQuantity = Number(quantityInput);
+    const validQuantity = isNaN(numQuantity) || numQuantity < 1 ? 1 : numQuantity;
+  
+    const standTypeId = form.getValues(`items.${index}.standTypeId`);
+    const description = form.getValues(`items.${index}.description`);
+    const unitPrice = form.getValues(`items.${index}.unitPrice`) || 0;
+  
     update(index, {
-      ...fields[index],
-      quantity,
-      total: quantity * unitPrice,
+      standTypeId,
+      description,
+      quantity: validQuantity,
+      unitPrice,
+      total: validQuantity * unitPrice,
     });
   };
   
-  const handleUnitPriceChange = (index: number, unitPrice: number) => {
-    const quantity = fields[index].quantity || 0;
-     update(index, {
-      ...fields[index],
-      unitPrice,
-      total: quantity * unitPrice,
+  const handleUnitPriceChange = (index: number, unitPriceInput: number | string) => {
+    const numUnitPrice = Number(unitPriceInput);
+    const validUnitPrice = isNaN(numUnitPrice) || numUnitPrice < 0 ? 0 : numUnitPrice;
+    
+    const standTypeId = form.getValues(`items.${index}.standTypeId`);
+    const description = form.getValues(`items.${index}.description`);
+    const quantity = form.getValues(`items.${index}.quantity`) || 0;
+  
+    update(index, {
+      standTypeId,
+      description,
+      quantity,
+      unitPrice: validUnitPrice,
+      total: quantity * validUnitPrice,
     });
   };
 
@@ -128,7 +151,7 @@ export function QuotationForm({ initialData, onSave }: QuotationFormProps) {
       ...data,
       items: data.items.map(item => ({
         ...item,
-        id: `item-${Date.now()}-${Math.random()}`, // Temporary ID
+        id: `item-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, 
         description: item.description || STAND_TYPES.find(s => s.id === item.standTypeId)?.name || ''
       })),
       subTotal,
@@ -272,9 +295,13 @@ export function QuotationForm({ initialData, onSave }: QuotationFormProps) {
                           placeholder="1" 
                           {...controllerField} 
                           onChange={(e) => {
-                            const val = parseInt(e.target.value);
-                            controllerField.onChange(val);
-                            handleQuantityChange(index, val);
+                            // Pass the raw value or parsed number to controllerField.onChange
+                            // Let RHF handle validation based on schema (z.number().min(1))
+                            // parseFloat is better here to allow for potential decimal quantities if requirements change
+                            // but schema expects integer, so parseInt is fine
+                            const value = e.target.value;
+                            controllerField.onChange(value === '' ? undefined : parseInt(value, 10));
+                            handleQuantityChange(index, value === '' ? 1 : parseInt(value, 10));
                           }}
                           min="1"
                         />
@@ -293,11 +320,12 @@ export function QuotationForm({ initialData, onSave }: QuotationFormProps) {
                          <Input 
                           type="number" 
                           placeholder="0.00" 
+                          step="any"
                           {...controllerField} 
                           onChange={(e) => {
-                            const val = parseFloat(e.target.value);
-                            controllerField.onChange(val);
-                            handleUnitPriceChange(index, val);
+                            const value = e.target.value;
+                            controllerField.onChange(value === '' ? undefined : parseFloat(value));
+                            handleUnitPriceChange(index, value === '' ? 0 : parseFloat(value));
                           }}
                           readOnly={!STAND_TYPES.find(st => st.id === watchedItems[index]?.standTypeId)?.remarks?.includes("Revenue sharing")} // Allow edit for revenue sharing types
                         />
@@ -389,3 +417,5 @@ export function QuotationForm({ initialData, onSave }: QuotationFormProps) {
     </Form>
   );
 }
+
+    
