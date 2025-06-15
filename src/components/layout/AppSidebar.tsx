@@ -10,18 +10,20 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarFooter,
+  type NavItemType, // Import the NavItemType
 } from "@/components/ui/sidebar";
 import { LayoutDashboard, FileText, FilePlus, Bot, Settings, LogOut, type LucideIcon } from "lucide-react";
 import { APP_NAME } from "@/lib/constants";
 import Image from "next/image";
 
-interface NavItem {
-  href: string;
-  label: string;
-  icon: LucideIcon;
-}
+// NavItemType is now imported from sidebar.tsx
+// interface NavItem {
+//   href: string;
+//   label: string;
+//   icon: LucideIcon;
+// }
 
-const navItems: NavItem[] = [
+const navItems: NavItemType[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/quotations", label: "Quotations", icon: FileText },
   { href: "/quotations/new", label: "New Quotation", icon: FilePlus },
@@ -29,7 +31,7 @@ const navItems: NavItem[] = [
   { href: "/ai-suggest", label: "AI Suggestion", icon: Bot },
 ];
 
-const bottomNavItems: NavItem[] = [
+const bottomNavItems: NavItemType[] = [
     // { href: "/settings", label: "Settings", icon: Settings },
     // { href: "/logout", label: "Logout", icon: LogOut },
 ];
