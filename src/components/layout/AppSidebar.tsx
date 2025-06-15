@@ -11,11 +11,17 @@ import {
   SidebarMenuButton,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, FileText, FilePlus, Bot, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, FileText, FilePlus, Bot, Settings, LogOut, type LucideIcon } from "lucide-react";
 import { APP_NAME } from "@/lib/constants";
 import Image from "next/image";
 
-const navItems = [
+interface NavItem {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+}
+
+const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/quotations", label: "Quotations", icon: FileText },
   { href: "/quotations/new", label: "New Quotation", icon: FilePlus },
@@ -23,7 +29,7 @@ const navItems = [
   { href: "/ai-suggest", label: "AI Suggestion", icon: Bot },
 ];
 
-const bottomNavItems = [
+const bottomNavItems: NavItem[] = [
     // { href: "/settings", label: "Settings", icon: Settings },
     // { href: "/logout", label: "Logout", icon: LogOut },
 ];
