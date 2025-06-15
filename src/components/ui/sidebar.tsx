@@ -538,9 +538,8 @@ const sidebarMenuButtonVariants = cva(
   }
 )
 
-// Define more explicit props for SidebarMenuButton
 interface SidebarMenuButtonOwnProps {
-  renderAsSlot?: boolean; // SidebarMenuButton's own decision to be a Slot
+  renderAsSlot?: boolean;
   isActive?: boolean;
   tooltip?: string | React.ComponentProps<typeof TooltipContent>;
 }
@@ -549,61 +548,66 @@ type SidebarMenuButtonProps = SidebarMenuButtonOwnProps &
   VariantProps<typeof sidebarMenuButtonVariants> &
   // Allow all standard HTML attributes for <a> or <button>
   // Also explicitly allow 'href' and 'asChild' (from parent Link)
-  // Omit own props from general HTMLAttributes to avoid conflicts
-  Omit<React.HTMLAttributes<HTMLElement>, keyof SidebarMenuButtonOwnProps | 'asChild'> &
-  { href?: string; asChild?: boolean; };
-
+  // Omit SidebarMenuButtonOwnProps from general HTMLAttributes to avoid conflicts
+  Omit<React.HTMLAttributes<HTMLElement>, keyof SidebarMenuButtonOwnProps> &
+  { href?: string; asChild?: boolean }; // asChild here is the one from parent Link
 
 const SidebarMenuButton = React.forwardRef<HTMLElement, SidebarMenuButtonProps>(
-  (
-    {
-      renderAsSlot = false,
+  (props, ref) => {
+    const {
+      renderAsSlot = false, // SidebarMenuButton's own "asChild" decision
       isActive = false,
       variant,
       size,
       tooltip,
       className,
       children,
-      href, // Explicitly destructured: comes from parent Link or direct pass
-      asChild: asChildFromParent, // Explicitly destructured: comes from parent Link
-      ...htmlAndOtherProps // Remaining HTML attributes and any other passed props
-    },
-    ref
-  ) => {
+      href, // This can come from parent Link or be passed directly
+      asChild: asChildFromParent, // This is the asChild prop from the parent (e.g., NextLink)
+      ...rest // All other props (e.g., onClick from NextLink, other HTML attributes)
+    } = props;
+
     const { isMobile, state } = useSidebar();
 
-    const Comp = renderAsSlot ? Slot : (href ? "a" : "button");
+    // Decide what actual element to render.
+    // If renderAsSlot is true, SidebarMenuButton delegates to its children via Slot.
+    // Else, if href is present, it's an anchor.
+    // Else, it's a button.
+    const ActualComp = renderAsSlot ? Slot : (href ? "a" : "button");
 
-    // Prepare props for the element, ensuring 'asChildFromParent' is not included
-    // if Comp is a native element.
-    const elementProps: any = {
-      ...htmlAndOtherProps, // These should NOT contain 'asChildFromParent' anymore
+    // 'rest' should NOT contain 'href' or 'asChildFromParent' because they were explicitly destructured.
+    // So, spreading 'rest' should be safe from the 'asChild' warning.
+    const elementSpecificProps: React.HTMLAttributes<HTMLElement> & { href?: string; type?: string } = {
+      ...rest, // Spread event handlers, aria-attributes, etc.
       className: cn(sidebarMenuButtonVariants({ variant, size, className })),
       "data-sidebar": "menu-button",
       "data-size": size,
       "data-active": isActive,
     };
 
-    if (Comp === "a" && href) {
-      elementProps.href = href;
-    } else if (Comp === "button" && !href && !elementProps.type) {
-      elementProps.type = "button";
+    if (ActualComp === "a" && href) {
+      elementSpecificProps.href = href;
+    } else if (ActualComp === "button" && !href && !elementSpecificProps.type) {
+      elementSpecificProps.type = "button";
     }
-    
-    // 'asChildFromParent' has been destructured and is not part of 'htmlAndOtherProps'.
-    // So, it won't be spread onto 'Comp' if 'Comp' is a native element.
-    // If 'Comp' is 'Slot', Radix Slot will handle its own 'asChild' prop if needed (which is `renderAsSlot` here).
 
-    const mainElement = React.createElement(Comp, { ref, ...elementProps }, children);
+    const mainRenderedElement = React.createElement(
+      ActualComp,
+      { ref, ...elementSpecificProps },
+      children
+    );
 
     if (!tooltip) {
-      return mainElement;
+      return mainRenderedElement;
     }
 
+    // If there's a tooltip, wrap it.
+    // TooltipTrigger asChild means TooltipTrigger will pass its props to mainRenderedElement.
+    // TooltipTrigger (Radix Slot) should correctly handle not passing 'asChild' down if it's already consumed.
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          {mainElement}
+          {mainRenderedElement}
         </TooltipTrigger>
         <TooltipContent
           side="right"
@@ -785,4 +789,3 @@ export {
   SidebarTrigger,
   useSidebar,
 }
-
