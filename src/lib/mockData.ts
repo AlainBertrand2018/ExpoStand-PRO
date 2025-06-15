@@ -38,9 +38,9 @@ const calculateTotals = (items: import('./types').DocumentItem[], discount: numb
   return { subTotal, discount, vatAmount, grandTotal };
 };
 
-export const mockQuotations: Quotation[] = [];
+export let mockQuotations: Quotation[] = [];
 
-export const mockInvoices: Invoice[] = [];
+export let mockInvoices: Invoice[] = [];
 
 
 export const getMockQuotations = async (): Promise<Quotation[]> => {
@@ -105,3 +105,8 @@ export const getMockInvoiceById = async (id: string): Promise<Invoice | undefine
   return new Promise(resolve => setTimeout(() => resolve(mockInvoices.find(inv => inv.id === id)), 300));
 };
 
+// Function to explicitly clear data - useful for testing or reset
+export const clearMockData = () => {
+  mockQuotations = [];
+  mockInvoices = [];
+};
