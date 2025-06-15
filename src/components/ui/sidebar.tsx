@@ -538,57 +538,63 @@ const sidebarMenuButtonVariants = cva(
   }
 )
 
-const SidebarMenuButton = React.forwardRef<
-  HTMLElement,
-  React.HTMLAttributes<HTMLElement> & {
-    renderAsSlot?: boolean; // SidebarMenuButton's own prop to decide if it's a Slot
-    isActive?: boolean;
-    tooltip?: string | React.ComponentProps<typeof TooltipContent>;
-    // Allow any other props, including `href` and `asChild` from a parent Link
-    [key: string]: any;
-  } & VariantProps<typeof sidebarMenuButtonVariants>
->(
+// Define more explicit props for SidebarMenuButton
+interface SidebarMenuButtonOwnProps {
+  renderAsSlot?: boolean; // SidebarMenuButton's own decision to be a Slot
+  isActive?: boolean;
+  tooltip?: string | React.ComponentProps<typeof TooltipContent>;
+}
+
+type SidebarMenuButtonProps = SidebarMenuButtonOwnProps &
+  VariantProps<typeof sidebarMenuButtonVariants> &
+  // Allow all standard HTML attributes for <a> or <button>
+  // Also explicitly allow 'href' and 'asChild' (from parent Link)
+  // Omit own props from general HTMLAttributes to avoid conflicts
+  Omit<React.HTMLAttributes<HTMLElement>, keyof SidebarMenuButtonOwnProps | 'asChild'> &
+  { href?: string; asChild?: boolean; };
+
+
+const SidebarMenuButton = React.forwardRef<HTMLElement, SidebarMenuButtonProps>(
   (
     {
-      renderAsSlot = false, // SidebarMenuButton's own decision to be a Slot
+      renderAsSlot = false,
       isActive = false,
-      variant, // Let cva handle default
-      size,    // Let cva handle default
+      variant,
+      size,
       tooltip,
       className,
       children,
-      // Destructure 'asChild' prop received from parent (e.g., Link)
-      // to prevent it from being spread to the DOM element.
-      asChild: asChildFromParent,
-      ...otherParentProps // This will include href if passed from Link
+      href, // Explicitly destructured: comes from parent Link or direct pass
+      asChild: asChildFromParent, // Explicitly destructured: comes from parent Link
+      ...htmlAndOtherProps // Remaining HTML attributes and any other passed props
     },
     ref
   ) => {
-    const { state, isMobile } = useSidebar();
+    const { isMobile, state } = useSidebar();
 
-    const hasHref = typeof otherParentProps.href === 'string';
+    const Comp = renderAsSlot ? Slot : (href ? "a" : "button");
 
-    // Determine the component to render.
-    // If renderAsSlot (SidebarMenuButton's own prop) is true, it's a Slot.
-    // Otherwise, if it has an href (from parent Link), it's an 'a'.
-    // Otherwise, it's a 'button'.
-    const Comp = renderAsSlot ? Slot : (hasHref ? "a" : "button");
-
-    // Props to be spread onto the Comp.
-    // Crucially, `asChildFromParent` is excluded here.
-    const elementProps: React.AllHTMLAttributes<HTMLElement> & { [key: string]: any } = {
-      ...otherParentProps,
+    // Prepare props for the element, ensuring 'asChildFromParent' is not included
+    // if Comp is a native element.
+    const elementProps: any = {
+      ...htmlAndOtherProps, // These should NOT contain 'asChildFromParent' anymore
       className: cn(sidebarMenuButtonVariants({ variant, size, className })),
       "data-sidebar": "menu-button",
       "data-size": size,
       "data-active": isActive,
     };
 
-    if (Comp === "button" && !hasHref && !elementProps.type) {
-      elementProps.type = "button"; // Default type for button
+    if (Comp === "a" && href) {
+      elementProps.href = href;
+    } else if (Comp === "button" && !href && !elementProps.type) {
+      elementProps.type = "button";
     }
     
-    const mainElement = React.createElement(Comp, { ref, ...elementProps } as any, children);
+    // 'asChildFromParent' has been destructured and is not part of 'htmlAndOtherProps'.
+    // So, it won't be spread onto 'Comp' if 'Comp' is a native element.
+    // If 'Comp' is 'Slot', Radix Slot will handle its own 'asChild' prop if needed (which is `renderAsSlot` here).
+
+    const mainElement = React.createElement(Comp, { ref, ...elementProps }, children);
 
     if (!tooltip) {
       return mainElement;
@@ -610,6 +616,7 @@ const SidebarMenuButton = React.forwardRef<
   }
 );
 SidebarMenuButton.displayName = "SidebarMenuButton"
+
 
 const SidebarMenuAction = React.forwardRef<
   HTMLButtonElement,
@@ -778,3 +785,4 @@ export {
   SidebarTrigger,
   useSidebar,
 }
+
