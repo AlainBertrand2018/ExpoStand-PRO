@@ -30,11 +30,12 @@ const createMockItems = (numItems: number = 1): import('./types').DocumentItem[]
   return items;
 };
 
-const calculateTotals = (items: import('./types').DocumentItem[]) => {
+const calculateTotals = (items: import('./types').DocumentItem[], discount: number = 0) => {
   const subTotal = items.reduce((sum, item) => sum + item.total, 0);
-  const vatAmount = subTotal * VAT_RATE;
-  const grandTotal = subTotal + vatAmount;
-  return { subTotal, vatAmount, grandTotal };
+  const amountBeforeVat = Math.max(0, subTotal - discount);
+  const vatAmount = amountBeforeVat * VAT_RATE;
+  const grandTotal = amountBeforeVat + vatAmount;
+  return { subTotal, discount, vatAmount, grandTotal };
 };
 
 export const mockQuotations: Quotation[] = [
@@ -49,7 +50,7 @@ export const mockQuotations: Quotation[] = [
     quotationDate: today.toISOString(),
     expiryDate: nextWeek.toISOString(),
     items: createMockItems(2),
-    ...calculateTotals(createMockItems(2)), 
+    ...calculateTotals(createMockItems(2), 500), 
     status: "Sent",
     currency: "MUR",
     notes: "Early bird discount applied.",
@@ -65,7 +66,7 @@ export const mockQuotations: Quotation[] = [
     quotationDate: new Date(new Date().setDate(new Date().getDate() - 5)).toISOString(),
     expiryDate: tomorrow.toISOString(),
     items: createMockItems(1),
-    ...calculateTotals(createMockItems(1)),
+    ...calculateTotals(createMockItems(1), 0),
     status: "Won",
     currency: "MUR",
   },
@@ -79,7 +80,7 @@ export const mockQuotations: Quotation[] = [
     quotationDate: new Date(new Date().setDate(new Date().getDate() - 10)).toISOString(),
     expiryDate: new Date(new Date().setDate(new Date().getDate() - 3)).toISOString(), 
     items: createMockItems(3),
-    ...calculateTotals(createMockItems(3)),
+    ...calculateTotals(createMockItems(3), 1000),
     status: "Rejected",
     currency: "MUR",
     notes: "Budget constraints.",
@@ -87,9 +88,10 @@ export const mockQuotations: Quotation[] = [
 ];
 
 mockQuotations.forEach(q => {
-  const tempItems = q.items; // Use existing items for calculation
-  const { subTotal, vatAmount, grandTotal } = calculateTotals(tempItems);
+  const tempItems = q.items; 
+  const { subTotal, discount, vatAmount, grandTotal } = calculateTotals(tempItems, q.discount);
   q.subTotal = subTotal;
+  q.discount = discount;
   q.vatAmount = vatAmount;
   q.grandTotal = grandTotal;
 });
@@ -104,6 +106,7 @@ let invoiceClientDetails = {
     clientBRN: "C40011223",
     clientCompany: "Global Biz Co"
 };
+let invoiceDiscount = 0;
 
 if (wonQuotationForInvoice) {
     invoiceItems = wonQuotationForInvoice.items;
@@ -115,6 +118,7 @@ if (wonQuotationForInvoice) {
         clientAddress: wonQuotationForInvoice.clientAddress,
         clientBRN: wonQuotationForInvoice.clientBRN,
     };
+    invoiceDiscount = wonQuotationForInvoice.discount || 0;
 }
 
 
@@ -126,7 +130,7 @@ export const mockInvoices: Invoice[] = [
     invoiceDate: new Date(new Date().setDate(new Date().getDate() - 4)).toISOString(),
     dueDate: nextMonth.toISOString(),
     items: invoiceItems,
-    ...calculateTotals(invoiceItems),
+    ...calculateTotals(invoiceItems, invoiceDiscount),
     paymentStatus: "Unpaid",
     currency: "MUR",
   },
@@ -141,7 +145,7 @@ export const mockInvoices: Invoice[] = [
     invoiceDate: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString(),
     dueDate: today.toISOString(), 
     items: createMockItems(2),
-    ...calculateTotals(createMockItems(2)), // Recalculate with its own items
+    ...calculateTotals(createMockItems(2), 250), 
     paymentStatus: "Unpaid",
     currency: "MUR",
     notes: "Payment reminder sent.",
@@ -149,9 +153,10 @@ export const mockInvoices: Invoice[] = [
 ];
 
 mockInvoices.forEach(inv => {
-  const tempItems = inv.items; // Use existing items for calculation
-  const { subTotal, vatAmount, grandTotal } = calculateTotals(tempItems);
+  const tempItems = inv.items; 
+  const { subTotal, discount, vatAmount, grandTotal } = calculateTotals(tempItems, inv.discount);
   inv.subTotal = subTotal;
+  inv.discount = discount;
   inv.vatAmount = vatAmount;
   inv.grandTotal = grandTotal;
 });
@@ -195,6 +200,7 @@ export const updateMockQuotationStatus = async (id: string, status: import('./co
         dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), 
         items: quotation.items,
         subTotal: quotation.subTotal,
+        discount: quotation.discount,
         vatAmount: quotation.vatAmount,
         grandTotal: quotation.grandTotal,
         paymentStatus: 'Unpaid',

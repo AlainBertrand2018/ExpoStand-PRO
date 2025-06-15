@@ -15,8 +15,8 @@ import type { DocumentItem, Quotation, ClientDetails } from '@/lib/types';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { PlusCircle, Trash2, Save, Send } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { addMockQuotation } from '@/lib/mockData'; // Assuming server action / API call module
-import { useRouter } from 'next/navigation'; // Corrected import
+import { addMockQuotation } from '@/lib/mockData'; 
+import { useRouter } from 'next/navigation'; 
 
 const quotationItemSchema = z.object({
   standTypeId: z.string().min(1, "Stand type is required"),
@@ -34,6 +34,7 @@ const quotationFormSchema = z.object({
   clientAddress: z.string().optional(),
   clientBRN: z.string().optional(),
   items: z.array(quotationItemSchema).min(1, "At least one item is required"),
+  discount: z.coerce.number().min(0, "Discount cannot be negative").optional().default(0),
   notes: z.string().optional(),
   status: z.enum(QUOTATION_STATUSES).default('Sent'),
   currency: z.string().default('MUR'),
@@ -55,6 +56,7 @@ export function QuotationForm({ initialData, onSave }: QuotationFormProps) {
     resolver: zodResolver(quotationFormSchema),
     defaultValues: initialData ? {
       ...initialData,
+      discount: initialData.discount || 0,
       items: initialData.items.map(item => ({
         standTypeId: item.standTypeId,
         description: item.description || STAND_TYPES.find(s => s.id === item.standTypeId)?.name || '',
@@ -70,6 +72,7 @@ export function QuotationForm({ initialData, onSave }: QuotationFormProps) {
       clientAddress: '',
       clientBRN: '',
       items: [{ standTypeId: '', description: '', quantity: 1, unitPrice: 0, total: 0 }],
+      discount: 0,
       notes: '',
       status: 'Sent',
       currency: 'MUR',
@@ -82,19 +85,22 @@ export function QuotationForm({ initialData, onSave }: QuotationFormProps) {
   });
 
   const watchedItems = form.watch("items");
+  const watchedDiscount = form.watch("discount");
 
   const calculateTotals = useCallback(() => {
     const subTotal = watchedItems.reduce((sum, item) => sum + (item.total || 0), 0);
-    const vatAmount = subTotal * VAT_RATE;
-    const grandTotal = subTotal + vatAmount;
-    return { subTotal, vatAmount, grandTotal };
-  }, [watchedItems]);
+    const discountAmount = watchedDiscount || 0;
+    const amountBeforeVat = Math.max(0, subTotal - discountAmount);
+    const vatAmount = amountBeforeVat * VAT_RATE;
+    const grandTotal = amountBeforeVat + vatAmount;
+    return { subTotal, discountAmount, vatAmount, grandTotal };
+  }, [watchedItems, watchedDiscount]);
 
   const [totals, setTotals] = useState(calculateTotals());
 
   useEffect(() => {
     setTotals(calculateTotals());
-  }, [watchedItems, calculateTotals]);
+  }, [watchedItems, watchedDiscount, calculateTotals]);
 
   const handleStandTypeChange = (index: number, standTypeId: string) => {
     const selectedStand = STAND_TYPES.find(s => s.id === standTypeId);
@@ -147,7 +153,7 @@ export function QuotationForm({ initialData, onSave }: QuotationFormProps) {
 
   async function onSubmit(data: QuotationFormValues) {
     setIsLoading(true);
-    const { subTotal, vatAmount, grandTotal } = calculateTotals();
+    const { subTotal, discountAmount, vatAmount, grandTotal } = calculateTotals();
     const quotationData: Omit<Quotation, 'id' | 'quotationDate' | 'expiryDate'> = {
       ...data,
       items: data.items.map(item => ({
@@ -156,6 +162,7 @@ export function QuotationForm({ initialData, onSave }: QuotationFormProps) {
         description: item.description || STAND_TYPES.find(s => s.id === item.standTypeId)?.name || ''
       })),
       subTotal,
+      discount: discountAmount,
       vatAmount,
       grandTotal,
     };
@@ -399,23 +406,57 @@ export function QuotationForm({ initialData, onSave }: QuotationFormProps) {
             <CardTitle>Summary & Notes</CardTitle>
           </CardHeader>
           <CardContent className="grid md:grid-cols-2 gap-6">
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Notes</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Add any notes for the client (optional)" {...field} rows={4}/>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <div className="space-y-2 text-right bg-muted/30 p-4 rounded-lg">
+            <div className="space-y-4">
+               <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Notes</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Add any notes for the client (optional)" {...field} rows={4}/>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+               <FormField
+                control={form.control}
+                name="discount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Discount ({form.getValues('currency')})</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        placeholder="0.00" 
+                        step="any"
+                        {...field} 
+                        onChange={(e) => {
+                          const value = parseFloat(e.target.value);
+                          field.onChange(isNaN(value) ? 0 : value);
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <div className="space-y-2 text-right bg-muted/30 p-4 rounded-lg self-start">
               <div className="flex justify-between"><span>Subtotal:</span> <span>{formatCurrency(totals.subTotal, form.getValues('currency'))}</span></div>
+              { (totals.discountAmount || 0) > 0 && (
+                <div className="flex justify-between text-destructive">
+                  <span>Discount:</span> 
+                  <span>-{formatCurrency(totals.discountAmount, form.getValues('currency'))}</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span>Amount before VAT:</span> 
+                <span>{formatCurrency(Math.max(0, totals.subTotal - (totals.discountAmount || 0)), form.getValues('currency'))}</span>
+              </div>
               <div className="flex justify-between"><span>VAT ({VAT_RATE * 100}%):</span> <span>{formatCurrency(totals.vatAmount, form.getValues('currency'))}</span></div>
-              <div className="flex justify-between font-bold text-lg text-primary"><span>Grand Total:</span> <span>{formatCurrency(totals.grandTotal, form.getValues('currency'))}</span></div>
+              <div className="flex justify-between font-bold text-lg text-primary border-t pt-2 mt-2"><span>Grand Total:</span> <span>{formatCurrency(totals.grandTotal, form.getValues('currency'))}</span></div>
             </div>
              <FormField
                 control={form.control}

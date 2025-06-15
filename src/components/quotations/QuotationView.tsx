@@ -34,6 +34,8 @@ export function QuotationView({ quotation }: QuotationViewProps) {
     // window.print(); 
   }
 
+  const amountBeforeVat = Math.max(0, quotation.subTotal - (quotation.discount || 0));
+
   return (
     <Card className="shadow-xl w-full max-w-4xl mx-auto">
       <CardHeader className="bg-muted/30 p-6">
@@ -46,7 +48,7 @@ export function QuotationView({ quotation }: QuotationViewProps) {
           <div className="text-sm text-right mt-2 sm:mt-0 space-y-1">
             <p><strong>Date:</strong> {formatDate(quotation.quotationDate)}</p>
             <p><strong>Expires:</strong> {formatDate(quotation.expiryDate)}</p>
-            <div><strong>Status:</strong> <Badge variant={quotation.status === 'Won' ? 'default' : quotation.status === 'Sent' ? 'secondary' : 'destructive'} className="capitalize text-sm ml-1">{quotation.status}</Badge></div>
+            <div className="flex items-center justify-end"><strong>Status:</strong> <Badge variant={quotation.status === 'Won' ? 'default' : quotation.status === 'Sent' ? 'secondary' : 'destructive'} className="capitalize text-sm ml-1">{quotation.status}</Badge></div>
           </div>
         </div>
       </CardHeader>
@@ -90,6 +92,16 @@ export function QuotationView({ quotation }: QuotationViewProps) {
             <div className="flex justify-between">
               <span>Subtotal:</span>
               <span>{formatCurrency(quotation.subTotal, quotation.currency)}</span>
+            </div>
+            {(quotation.discount || 0) > 0 && (
+              <div className="flex justify-between text-destructive">
+                <span>Discount:</span>
+                <span>-{formatCurrency(quotation.discount!, quotation.currency)}</span>
+              </div>
+            )}
+             <div className="flex justify-between">
+              <span>Amount before VAT:</span>
+              <span>{formatCurrency(amountBeforeVat, quotation.currency)}</span>
             </div>
             <div className="flex justify-between">
               <span>VAT ({VAT_RATE * 100}%):</span>

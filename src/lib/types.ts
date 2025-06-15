@@ -4,14 +4,14 @@ import type { QuotationStatus, InvoicePaymentStatus, StandType } from "./constan
 export interface ClientDetails {
   clientName: string;
   clientCompany?: string;
-  clientEmail: string; // Made mandatory
-  clientPhone?: string; // Added
-  clientAddress?: string; // Added
-  clientBRN?: string; // Added
+  clientEmail: string; 
+  clientPhone?: string; 
+  clientAddress?: string; 
+  clientBRN?: string; 
 }
 
 export interface DocumentItem {
-  id: string; // Unique ID for the item line
+  id: string; 
   standTypeId: StandType['id'];
   description: string;
   quantity: number;
@@ -20,11 +20,12 @@ export interface DocumentItem {
 }
 
 export interface Quotation extends ClientDetails {
-  id: string; // Q-YYYYMMDD-XXXX
-  quotationDate: string; // ISO string
-  expiryDate: string; // ISO string
+  id: string; 
+  quotationDate: string; 
+  expiryDate: string; 
   items: DocumentItem[];
   subTotal: number;
+  discount?: number; 
   vatAmount: number;
   grandTotal: number;
   status: QuotationStatus;
@@ -33,12 +34,13 @@ export interface Quotation extends ClientDetails {
 }
 
 export interface Invoice extends ClientDetails {
-  id: string; // INV-YYYYMMDD-XXXX
-  quotationId?: string; // Link to original quotation if any
-  invoiceDate: string; // ISO string
-  dueDate: string; // ISO string
+  id: string; 
+  quotationId?: string; 
+  invoiceDate: string; 
+  dueDate: string; 
   items: DocumentItem[];
   subTotal: number;
+  discount?: number; 
   vatAmount: number;
   grandTotal: number;
   paymentStatus: InvoicePaymentStatus;

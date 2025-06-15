@@ -34,6 +34,8 @@ export function InvoiceView({ invoice }: InvoiceViewProps) {
     // window.print(); 
   }
 
+  const amountBeforeVat = Math.max(0, invoice.subTotal - (invoice.discount || 0));
+
   return (
     <Card className="shadow-xl w-full max-w-4xl mx-auto">
       <CardHeader className="bg-muted/30 p-6">
@@ -91,6 +93,16 @@ export function InvoiceView({ invoice }: InvoiceViewProps) {
             <div className="flex justify-between">
               <span>Subtotal:</span>
               <span>{formatCurrency(invoice.subTotal, invoice.currency)}</span>
+            </div>
+             {(invoice.discount || 0) > 0 && (
+              <div className="flex justify-between text-destructive">
+                <span>Discount:</span>
+                <span>-{formatCurrency(invoice.discount!, invoice.currency)}</span>
+              </div>
+            )}
+            <div className="flex justify-between">
+              <span>Amount before VAT:</span>
+              <span>{formatCurrency(amountBeforeVat, invoice.currency)}</span>
             </div>
             <div className="flex justify-between">
               <span>VAT ({VAT_RATE * 100}%):</span>
