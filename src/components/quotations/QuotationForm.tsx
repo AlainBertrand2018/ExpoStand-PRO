@@ -12,13 +12,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { STAND_TYPES, VAT_RATE, QUOTATION_STATUSES } from '@/lib/constants';
 import type { DocumentItem, Quotation, ClientDetails } from '@/lib/types';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatDate, generateQuotationId, getStandTypeName } from '@/lib/utils';
 import { PlusCircle, Trash2, Save, Send } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { addMockQuotation } from '@/lib/mockData'; 
 import { useRouter } from 'next/navigation'; 
 
 const quotationItemSchema = z.object({
+  id: z.string().optional(), // Existing item ID for updates
   standTypeId: z.string().min(1, "Stand type is required"),
   description: z.string().optional(),
   quantity: z.number().min(1, "Quantity must be at least 1"),
@@ -36,7 +36,7 @@ const quotationFormSchema = z.object({
   items: z.array(quotationItemSchema).min(1, "At least one item is required"),
   discount: z.coerce.number().min(0, "Discount cannot be negative").optional().default(0),
   notes: z.string().optional(),
-  status: z.enum(QUOTATION_STATUSES).default('To Send'),
+  status: z.enum(QUOTATION_STATUSES), // Default is handled by form init
   currency: z.string().default('MUR'),
 });
 
@@ -44,10 +44,11 @@ type QuotationFormValues = z.infer<typeof quotationFormSchema>;
 
 interface QuotationFormProps {
   initialData?: Quotation; 
-  onSave?: (data: Quotation) => Promise<void>;
+  saveQuotation: (data: Quotation) => Promise<Quotation | void | undefined>;
+  mode: 'create' | 'edit';
 }
 
-export function QuotationForm({ initialData, onSave }: QuotationFormProps) {
+export function QuotationForm({ initialData, saveQuotation, mode }: QuotationFormProps) {
   const { toast } = useToast();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -58,12 +59,14 @@ export function QuotationForm({ initialData, onSave }: QuotationFormProps) {
       ...initialData,
       discount: initialData.discount || 0,
       items: initialData.items.map(item => ({
+        id: item.id, // Important for edit mode
         standTypeId: item.standTypeId,
-        description: item.description || STAND_TYPES.find(s => s.id === item.standTypeId)?.name || '',
+        description: item.description || getStandTypeName(item.standTypeId, STAND_TYPES) || '',
         quantity: item.quantity,
         unitPrice: item.unitPrice,
         total: item.total
       })),
+      // status will be set from initialData.status
     } : {
       clientName: '',
       clientCompany: '',
@@ -71,15 +74,15 @@ export function QuotationForm({ initialData, onSave }: QuotationFormProps) {
       clientPhone: '',
       clientAddress: '',
       clientBRN: '',
-      items: [{ standTypeId: '', description: '', quantity: 1, unitPrice: 0, total: 0 }],
+      items: [{ standTypeId: '', description: '', quantity: 1, unitPrice: 0, total: 0 }], // id will be undefined for new items
       discount: 0,
       notes: '',
-      status: 'To Send',
+      status: 'To Send', // Default for new quotations
       currency: 'MUR',
     },
   });
 
-  const { fields, append, remove, update } = useFieldArray({
+  const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "items",
   });
@@ -132,39 +135,51 @@ export function QuotationForm({ initialData, onSave }: QuotationFormProps) {
     form.setValue(`items.${index}.total`, quantity * validUnitPrice);
   };
 
-
   async function onSubmit(data: QuotationFormValues) {
     setIsLoading(true);
     const { subTotal, discountAmount, vatAmount, grandTotal } = calculateTotals();
-    const quotationData: Omit<Quotation, 'id' | 'quotationDate' | 'expiryDate'> = {
-      ...data,
-      items: data.items.map(item => ({
-        ...item,
-        id: `item-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, 
-        description: item.description || STAND_TYPES.find(s => s.id === item.standTypeId)?.name || ''
+    
+    const quotationData: Quotation = {
+      id: initialData?.id || generateQuotationId(data.clientName),
+      quotationDate: initialData?.quotationDate || new Date().toISOString(),
+      expiryDate: initialData?.expiryDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      clientName: data.clientName,
+      clientCompany: data.clientCompany,
+      clientEmail: data.clientEmail,
+      clientPhone: data.clientPhone,
+      clientAddress: data.clientAddress,
+      clientBRN: data.clientBRN,
+      items: data.items.map((item): DocumentItem => ({
+        id: item.id || `item-new-${Date.now()}-${Math.random().toString(36).substring(2,5)}`, // Ensure every item has an ID
+        standTypeId: item.standTypeId,
+        description: item.description || getStandTypeName(item.standTypeId, STAND_TYPES) || '',
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        total: item.total,
       })),
       subTotal,
       discount: discountAmount,
       vatAmount,
       grandTotal,
+      status: data.status, // Status comes from the form (which was initialized by initialData.status if editing)
+      notes: data.notes,
+      currency: data.currency,
     };
 
     try {
-      if (onSave) {
-        // await onSave(quotationData as Quotation); // This is for edit mode, not implemented yet
-      } else {
-        const newQuotation = await addMockQuotation(quotationData); 
-        toast({
-          title: "Quotation Created",
-          description: `Quotation ${newQuotation.id} has been successfully created.`,
-        });
-        router.push(`/quotations/${newQuotation.id}`);
-      }
+      const result = await saveQuotation(quotationData);
+      const resultId = result ? (result as Quotation).id : quotationData.id;
+
+      toast({
+        title: mode === 'create' ? "Quotation Created" : "Quotation Updated",
+        description: `Quotation ${resultId} has been successfully ${mode === 'create' ? 'created' : 'updated'}.`,
+      });
+      router.push(`/quotations/${resultId}`);
     } catch (error) {
-      console.error("Failed to save quotation:", error);
+      console.error(`Failed to ${mode} quotation:`, error);
       toast({
         title: "Error",
-        description: "Failed to save quotation. Please try again.",
+        description: `Failed to ${mode} quotation. Please try again.`,
         variant: "destructive",
       });
     } finally {
@@ -266,12 +281,12 @@ export function QuotationForm({ initialData, onSave }: QuotationFormProps) {
             <CardTitle>Quotation Items</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {fields.map((field, index) => (
+            {fields.map((field, index) => ( // field here is the react-hook-form field object, not the data item directly
               <div key={field.id} className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end p-4 border rounded-lg relative">
-                <FormField
+                 <FormField
                   control={form.control}
                   name={`items.${index}.standTypeId`}
-                  render={({ field: controllerField }) => (
+                  render={({ field: controllerField }) => ( // Renamed to avoid confusion with outer field
                     <FormItem className="md:col-span-4">
                       <FormLabel>Stand Type*</FormLabel>
                       <Select 
@@ -288,8 +303,8 @@ export function QuotationForm({ initialData, onSave }: QuotationFormProps) {
                         </FormControl>
                         <SelectContent>
                           {STAND_TYPES.map(stand => (
-                            <SelectItem key={stand.id} value={stand.id} disabled={stand.available <=0}>
-                              {stand.name} ({stand.available > 0 ? `${stand.available} available` : 'Sold out'})
+                            <SelectItem key={stand.id} value={stand.id} disabled={stand.available <=0 && (!initialData || initialData.items.find(i=>i.standTypeId === stand.id)?.standTypeId !== stand.id )}>
+                              {stand.name} ({stand.available > 0 || (initialData && initialData.items.find(i=>i.standTypeId === stand.id)) ? `${stand.available} available` : 'Sold out'})
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -301,11 +316,11 @@ export function QuotationForm({ initialData, onSave }: QuotationFormProps) {
                 <FormField
                   control={form.control}
                   name={`items.${index}.description`}
-                  render={({ field }) => (
+                  render={({ field: controllerField }) => (
                     <FormItem className="md:col-span-3 hidden md:block">
                       <FormLabel>Description</FormLabel>
                        <FormControl>
-                        <Input placeholder="Stand description" {...field} readOnly />
+                        <Input placeholder="Stand description" {...controllerField} readOnly />
                       </FormControl>
                     </FormItem>
                   )}
@@ -377,7 +392,7 @@ export function QuotationForm({ initialData, onSave }: QuotationFormProps) {
             <Button
               type="button"
               variant="outline"
-              onClick={() => append({ standTypeId: '', description:'', quantity: 1, unitPrice: 0, total: 0 })}
+              onClick={() => append({ standTypeId: '', description:'', quantity: 1, unitPrice: 0, total: 0 })} // New items won't have an 'id' here
               className="mt-2"
             >
               <PlusCircle className="mr-2 h-4 w-4" /> Add Item
@@ -416,10 +431,10 @@ export function QuotationForm({ initialData, onSave }: QuotationFormProps) {
                         placeholder="0.00" 
                         step="any"
                         {...field} 
-                        value={field.value || ''}
+                        value={field.value ?? ''} // Use ?? instead of || to allow 0
                         onChange={(e) => {
                           const value = parseFloat(e.target.value);
-                          field.onChange(isNaN(value) ? 0 : value);
+                          field.onChange(isNaN(value) || value < 0 ? 0 : value); // Ensure non-negative
                         }}
                       />
                     </FormControl>
@@ -448,11 +463,11 @@ export function QuotationForm({ initialData, onSave }: QuotationFormProps) {
                 name="status"
                 render={({ field }) => (
                   <FormItem className="md:col-span-2">
-                    <FormLabel>Initial Status</FormLabel>
+                    <FormLabel>Status</FormLabel>
                      <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Set initial status" />
+                          <SelectValue placeholder="Set status" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -469,7 +484,7 @@ export function QuotationForm({ initialData, onSave }: QuotationFormProps) {
           <CardFooter className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => router.back()} disabled={isLoading}>Cancel</Button>
             <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isLoading}>
-              {isLoading ? <><Save className="mr-2 h-4 w-4 animate-pulse" /> Saving...</> : <><Save className="mr-2 h-4 w-4" /> Save Quotation</>}
+              {isLoading ? <><Save className="mr-2 h-4 w-4 animate-pulse" /> Saving...</> : <><Save className="mr-2 h-4 w-4" /> {mode === 'create' ? 'Save Quotation' : 'Update Quotation'}</>}
             </Button>
           </CardFooter>
         </Card>
