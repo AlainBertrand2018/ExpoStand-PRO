@@ -4,7 +4,7 @@
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { VariantProps, cva } from "class-variance-authority"
-import { PanelLeft } from "lucide-react"
+import { PanelLeft, type LucideIcon } from "lucide-react"
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
@@ -19,7 +19,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import type { LucideIcon } from "lucide-react"
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
@@ -546,7 +545,9 @@ export interface NavItemType {
 }
 
 
-interface SidebarMenuButtonProps extends React.HTMLAttributes<HTMLElement>, VariantProps<typeof sidebarMenuButtonVariants> {
+interface SidebarMenuButtonProps
+  extends React.HTMLAttributes<HTMLElement>,
+    VariantProps<typeof sidebarMenuButtonVariants> {
   asChild?: boolean;
   isActive?: boolean;
   tooltip?: string | React.ComponentProps<typeof TooltipContent>;
@@ -554,41 +555,52 @@ interface SidebarMenuButtonProps extends React.HTMLAttributes<HTMLElement>, Vari
 }
 
 const SidebarMenuButton = React.forwardRef<HTMLElement, SidebarMenuButtonProps>(
-  ({
-    className,
-    variant,
-    size,
-    asChild = false,
-    isActive = false,
-    tooltip,
-    href, 
-    children,
-    ...props 
-  }, ref) => {
+  (
+    {
+      className,
+      variant,
+      size,
+      asChild: useSlot = false, // This is the asChild prop for SidebarMenuButton itself
+      isActive = false,
+      tooltip,
+      href: explicitHref, // href explicitly passed to SidebarMenuButton
+      children,
+      ...parentProps // These are props from the parent component (e.g., Link)
+    },
+    ref
+  ) => {
     const { isMobile, state } = useSidebar();
     
+    // Determine the actual href to use, prioritizing an explicit href on SidebarMenuButton,
+    // then an href from parent props (e.g., from Link).
+    const actualHref = explicitHref || (parentProps as any).href;
+    
     // Determine the component to render:
-    // 1. If asChild is true, always render Slot (to be filled by parent, e.g., Link).
-    // 2. Else, if href is provided, render an 'a' tag.
-    // 3. Else, render a 'button' tag.
-    const Comp = asChild ? Slot : href ? "a" : "button";
+    // - If useSlot is true, always render Slot.
+    // - Else, if actualHref is present, render 'a'.
+    // - Else, render 'button'.
+    const Comp = useSlot ? Slot : actualHref ? "a" : "button";
 
-    // Cast props to 'any' for spreading onto Comp, as Comp can be Slot, 'a', or 'button'
-    const elementProps: any = {
-      ...props,
-      ref,
+    // IMPORTANT: Remove `asChild` from `parentProps` if it exists,
+    // to prevent it from being spread onto a DOM element if Comp is not Slot.
+    const { asChild: _asChildFromParent, ...safeParentProps } = parentProps as any;
+
+    const elementProps: React.HTMLAttributes<HTMLElement> & Record<string, any> = {
+      ...safeParentProps, // Spread the "cleaned" parent props
+      ref: ref as any, // Cast ref, as Comp can be Slot or DOM element
       className: cn(sidebarMenuButtonVariants({ variant, size, className })),
       'data-sidebar': "menu-button",
       'data-size': size,
       'data-active': isActive,
     };
     
-    // If Comp is 'a' (meaning not asChild and href is present), set the href attribute.
-    if (Comp === "a" && href) {
-        elementProps.href = href;
+    // If Comp is 'a' and we have an actualHref, ensure it's on elementProps
+    if (Comp === "a" && actualHref) {
+        elementProps.href = actualHref;
     }
-    // If Comp is 'button' (meaning not asChild and no href) and type is not explicitly set, default to 'button'.
-    if (Comp === "button" && !props.type) {
+    
+    // If Comp is 'button', ensure it has type="button" if no type is otherwise specified
+    if (Comp === "button" && !elementProps.type && !(safeParentProps as any).type) {
         elementProps.type = "button";
     }
 
@@ -783,4 +795,9 @@ export {
   SidebarTrigger,
   useSidebar,
 }
+export type { NavItemType };
+// Ensure NavItemType is re-exported as NavItem if it was previously done.
+// If NavItem was a distinct type, ensure it's defined or imported.
+// For now, NavItemType is sufficient as it's used internally.
+// Re-exporting as NavItem for compatibility if AppSidebar expects `NavItem`
 export type { NavItemType as NavItem };

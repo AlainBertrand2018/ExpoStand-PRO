@@ -16,13 +16,6 @@ import { LayoutDashboard, FileText, FilePlus, Bot, Settings, LogOut, type Lucide
 import { APP_NAME } from "@/lib/constants";
 import Image from "next/image";
 
-// NavItemType is now imported from sidebar.tsx
-// interface NavItem {
-//   href: string;
-//   label: string;
-//   icon: LucideIcon;
-// }
-
 const navItems: NavItemType[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/quotations", label: "Quotations", icon: FileText },
