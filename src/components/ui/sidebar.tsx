@@ -524,69 +524,56 @@ const sidebarMenuButtonVariants = cva(
 )
 
 const SidebarMenuButton = React.forwardRef<
-  HTMLElement, // More generic ref type for polymorphism
-  React.HTMLAttributes<HTMLElement> & { // More generic props
-    asChild?: boolean
-    isActive?: boolean
-    tooltip?: string | React.ComponentProps<typeof TooltipContent>
+  HTMLElement,
+  React.HTMLAttributes<HTMLElement> & {
+    asChild?: boolean; // SidebarMenuButton's own asChild prop
+    isActive?: boolean;
+    tooltip?: string | React.ComponentProps<typeof TooltipContent>;
   } & VariantProps<typeof sidebarMenuButtonVariants>
 >(
   (
     {
-      asChild: useSlotOverride = false,
+      asChild: useSlotOverride = false, // SidebarMenuButton's own asChild, aliased
       isActive = false,
       variant = "default",
       size = "default",
       tooltip,
       className,
       children,
-      ...restProps // Contains props from parent (e.g., Link), including `href` and `asChild`
+      ...restProps // Contains props from parent, potentially including parent's asChild
     },
     ref
   ) => {
-    const { isMobile, state } = useSidebar()
+    const { isMobile, state } = useSidebar();
     
-    // Determine the component to render. If this button itself is used with `asChild`,
-    // it becomes a Slot. Otherwise, it defaults to 'button'.
-    // However, if `href` is present in `restProps` (passed from `next/link`),
-    // it should ideally render an `<a>` tag or let `next/link` handle it.
-    // For simplicity with `next/link asChild`, `SidebarMenuButton` will typically
-    // be the direct child that `Link` controls, effectively becoming an `<a>`.
-    // In such cases, `useSlotOverride` for `SidebarMenuButton` should be `false`.
     const Comp = useSlotOverride ? Slot : "button";
 
-    // Prepare props to be spread.
-    // If this component is rendering a native element (not a Slot via its own useSlotOverride),
-    // then we must ensure that an `asChild` prop coming from a parent (like Link)
-    // is not passed to the native DOM element.
-    let propsToSpread: Record<string, any> = { ...restProps };
-    if (!useSlotOverride && propsToSpread.asChild) {
-      // Remove `asChild` if it came from `restProps` and we are rendering a native element
-      delete propsToSpread.asChild;
-    }
+    // Destructure `asChild` from `restProps` (which came from the parent, e.g. <Link asChild>)
+    // This ensures `asChildFromParent` is not spread onto the native DOM element if Comp is "button".
+    const { asChild: _asChildFromParent, ...otherParentProps } = restProps;
 
     const buttonElement = (
       <Comp
-        ref={ref as React.Ref<any>} // Casting ref due to polymorphic nature of Comp
+        ref={ref as React.Ref<any>}
         data-sidebar="menu-button"
         data-size={size}
         data-active={isActive}
         className={cn(sidebarMenuButtonVariants({ variant, size }), className)}
-        {...propsToSpread} // Spread the potentially modified props
+        {...otherParentProps} // Spread remaining props from parent (e.g. href, onClick)
       >
         {children}
       </Comp>
-    )
+    );
 
     if (!tooltip) {
-      return buttonElement
+      return buttonElement;
     }
 
-    let tooltipOptions: React.ComponentProps<typeof TooltipContent> = {}
+    let tooltipOptions: React.ComponentProps<typeof TooltipContent> = {};
     if (typeof tooltip === "string") {
-      tooltipOptions = { children: tooltip }
+      tooltipOptions = { children: tooltip };
     } else {
-      tooltipOptions = tooltip
+      tooltipOptions = tooltip;
     }
 
     return (
@@ -599,9 +586,9 @@ const SidebarMenuButton = React.forwardRef<
           {...tooltipOptions}
         />
       </Tooltip>
-    )
+    );
   }
-)
+);
 SidebarMenuButton.displayName = "SidebarMenuButton"
 
 const SidebarMenuAction = React.forwardRef<
