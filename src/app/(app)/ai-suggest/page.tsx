@@ -10,13 +10,15 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Bot, Lightbulb, Zap, AlertTriangle } from 'lucide-react';
-// import { suggestStandConfiguration, type SuggestStandConfigurationInput, type SuggestStandConfigurationOutput } from '@/ai/flows/suggest-stand-configuration'; // AI Flow disabled
+// AI Flow import removed to prevent bundling for deployment troubleshooting
+// import { suggestStandConfiguration, type SuggestStandConfigurationInput, type SuggestStandConfigurationOutput } from '@/ai/flows/suggest-stand-configuration';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from '@/components/ui/skeleton';
 
-// Define types here if import is commented out, to avoid breaking the form schema
+// Define types here as import is commented out
 type SuggestStandConfigurationOutput = { suggestedConfiguration: string; reasoning: string };
+// type SuggestStandConfigurationInput = { numberOfAttendees: number; spaceRequirements: string; budget: number; };
 
 
 const suggestionFormSchema = z.object({
@@ -45,7 +47,6 @@ export default function AiSuggestionPage() {
     setIsLoading(true);
     setSuggestionResult(null);
     
-    // AI feature is disabled for deployment diagnosis
     toast({
       title: "Feature Temporarily Unavailable",
       description: "AI suggestions are currently disabled. Please try again later.",
@@ -53,12 +54,12 @@ export default function AiSuggestionPage() {
       duration: 5000,
     });
     
-    // Simulating a delay for UI purposes if needed, but keeping it direct for now
-    // await new Promise(resolve => setTimeout(resolve, 1000));
-    // setSuggestionResult({
-    //   suggestedConfiguration: "AI Suggestion feature is temporarily disabled.",
-    //   reasoning: "The AI model could not be reached or the feature is under maintenance."
-    // });
+    // Simulate a short delay and set a placeholder message
+    await new Promise(resolve => setTimeout(resolve, 500));
+    setSuggestionResult({
+      suggestedConfiguration: "AI Suggestion feature is temporarily disabled for maintenance.",
+      reasoning: "We are working to restore this feature. Please check back soon."
+    });
     
     setIsLoading(false);
   }
