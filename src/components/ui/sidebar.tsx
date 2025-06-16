@@ -544,67 +544,59 @@ export interface NavItemType {
   icon: LucideIcon;
 }
 
-
-interface SidebarMenuButtonProps
-  extends React.HTMLAttributes<HTMLElement>,
+export interface SidebarMenuButtonProps
+  extends React.ComponentPropsWithoutRef<'button'>, // Base props, can be overridden if href is present
     VariantProps<typeof sidebarMenuButtonVariants> {
-  asChild?: boolean;
+  asChild?: boolean; // SidebarMenuButton's own asChild prop
   isActive?: boolean;
   tooltip?: string | React.ComponentProps<typeof TooltipContent>;
-  href?: string; 
+  // href is not explicitly in this interface, it will be part of ...props if provided by Link
 }
 
-const SidebarMenuButton = React.forwardRef<HTMLElement, SidebarMenuButtonProps>(
+const SidebarMenuButton = React.forwardRef<
+  HTMLElement, // Can be button, a, or Slot's child
+  SidebarMenuButtonProps & { href?: string } // Allow href to be passed in ...props from Link
+>(
   (
     {
       className,
       variant,
       size,
-      asChild: useSlot = false, // This is the asChild prop for SidebarMenuButton itself
+      asChild = false, // SidebarMenuButton's own decision to render Slot
       isActive = false,
       tooltip,
-      href: explicitHref, // href explicitly passed to SidebarMenuButton
       children,
-      ...parentProps // These are props from the parent component (e.g., Link)
+      href, // Destructure href (could be from Link or direct prop)
+      ...props // All other props (like onClick from Link, or other button/a attributes)
     },
     ref
   ) => {
-    const { isMobile, state } = useSidebar();
-    
-    // Determine the actual href to use, prioritizing an explicit href on SidebarMenuButton,
-    // then an href from parent props (e.g., from Link).
-    const actualHref = explicitHref || (parentProps as any).href;
-    
-    // Determine the component to render:
-    // - If useSlot is true, always render Slot.
-    // - Else, if actualHref is present, render 'a'.
-    // - Else, render 'button'.
-    const Comp = useSlot ? Slot : actualHref ? "a" : "button";
+    // Determine the component to render.
+    // 1. If this SidebarMenuButton instance is explicitly `asChild`, render Slot.
+    // 2. Else, if an `href` is present (from Link or direct prop), render 'a'.
+    // 3. Else, render 'button'.
+    const Comp = asChild ? Slot : href ? "a" : "button";
 
-    // IMPORTANT: Remove `asChild` from `parentProps` if it exists,
-    // to prevent it from being spread onto a DOM element if Comp is not Slot.
-    const { asChild: _asChildFromParent, ...safeParentProps } = parentProps as any;
-
-    const elementProps: React.HTMLAttributes<HTMLElement> & Record<string, any> = {
-      ...safeParentProps, // Spread the "cleaned" parent props
-      ref: ref as any, // Cast ref, as Comp can be Slot or DOM element
+    const allElementProps: React.HTMLAttributes<HTMLElement> & Record<string, any> = {
+      ...props, // Spread all incoming props (e.g., onClick from Link)
+      ref,
       className: cn(sidebarMenuButtonVariants({ variant, size, className })),
       'data-sidebar': "menu-button",
       'data-size': size,
       'data-active': isActive,
     };
-    
-    // If Comp is 'a' and we have an actualHref, ensure it's on elementProps
-    if (Comp === "a" && actualHref) {
-        elementProps.href = actualHref;
-    }
-    
-    // If Comp is 'button', ensure it has type="button" if no type is otherwise specified
-    if (Comp === "button" && !elementProps.type && !(safeParentProps as any).type) {
-        elementProps.type = "button";
-    }
 
-    const mainRenderedElement = React.createElement(Comp, elementProps, children);
+    if (Comp === "a") {
+      allElementProps.href = href; // Ensure href is set if it's an anchor
+    } else if (Comp === "button") {
+      // If it's a button, ensure it has a type if not specified, and remove href if present.
+      if (!allElementProps.type) {
+        allElementProps.type = "button";
+      }
+      delete allElementProps.href; // Critical: do not pass href to a button
+    }
+    
+    const mainRenderedElement = React.createElement(Comp, allElementProps, children);
 
     if (!tooltip) {
       return mainRenderedElement;
@@ -618,7 +610,7 @@ const SidebarMenuButton = React.forwardRef<HTMLElement, SidebarMenuButtonProps>(
         <TooltipContent
           side="right"
           align="center"
-          hidden={isMobile || state !== "collapsed"}
+          // Removed problematic 'hidden' prop that relied on out-of-scope variables
           {...(typeof tooltip === 'string' ? { children: tooltip } : tooltip)}
         />
       </Tooltip>
@@ -795,7 +787,6 @@ export {
   SidebarTrigger,
   useSidebar,
 }
-export type { NavItemType };
 // Ensure NavItemType is re-exported as NavItem if it was previously done.
 // If NavItem was a distinct type, ensure it's defined or imported.
 // For now, NavItemType is sufficient as it's used internally.
