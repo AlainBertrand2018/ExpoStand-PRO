@@ -10,11 +10,10 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarFooter,
-  type NavItemType, // Import the NavItemType
+  type NavItemType,
 } from "@/components/ui/sidebar";
 import { LayoutDashboard, FileText, FilePlus, Bot, Settings, LogOut, type LucideIcon } from "lucide-react";
 import { APP_NAME } from "@/lib/constants";
-import Image from "next/image";
 
 const navItems: NavItemType[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
